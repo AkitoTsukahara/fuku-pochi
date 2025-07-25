@@ -3,9 +3,9 @@
 ## 必要な環境
 
 - Docker & Docker Compose
-- Node.js (v18以上)
-- PHP (v8.1以上)
-- Composer
+- Node.js (v22 LTS)
+- PHP (v8.4)
+- Composer (v2.x)
 
 ## Docker構成
 
@@ -15,19 +15,19 @@
 services:
   # Laravel API サーバー
   backend:
-    - PHP 8.1 + Laravel
+    - PHP 8.4 + Laravel 12.x
     - MySQL データベース
     - ポート: 8000
 
   # SvelteKit フロントエンド
   frontend:
-    - Node.js 18
+    - Node.js 22 LTS
     - SvelteKit
     - ポート: 5173
 
   # データベース
   database:
-    - MySQL 8.0
+    - MySQL 8.4 LTS
     - ローカル永続化あり
 ```
 

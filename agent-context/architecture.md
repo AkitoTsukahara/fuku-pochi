@@ -4,9 +4,9 @@
 
 | 項目 | 内容 |
 |------|------|
-| フロントエンド | SvelteKit |
-| バックエンド | Laravel |
-| データベース | MySQL（Laravel Vaporの仕様に合わせて調整） |
+| フロントエンド | SvelteKit（Node.js 22 LTS） |
+| バックエンド | Laravel 12.x（PHP 8.4） |
+| データベース | MySQL 8.4 LTS |
 | テスト | Vitest（FE）・PHPUnit（BE） |
 | デプロイ候補 | Laravel Vapor（無料プラン前提で調査中） |
 

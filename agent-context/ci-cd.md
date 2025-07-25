@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: fukupochi_test
@@ -41,12 +41,12 @@ jobs:
           - 3306:3306
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.1
+          php-version: 8.4
           extensions: pdo_mysql
           
       - name: Install dependencies
@@ -69,12 +69,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
           
@@ -110,12 +110,12 @@ jobs:
     needs: [backend-tests, frontend-tests]
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.1
+          php-version: 8.4
           
       - name: Install Laravel Vapor CLI
         run: composer global require laravel/vapor-cli
@@ -177,7 +177,7 @@ environments:
   production:
     memory: 1024
     cli-memory: 512
-    runtime: php-8.1
+    runtime: php-8.4
     database: fukupochi-production
     cache: fukupochi-cache
     build:
