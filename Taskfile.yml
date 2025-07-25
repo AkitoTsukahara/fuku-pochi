@@ -1,0 +1,172 @@
+version: '3'
+
+vars:
+  BACKEND_SERVICE: backend
+  FRONTEND_SERVICE: frontend
+  DATABASE_SERVICE: database
+
+tasks:
+  default:
+    desc: 利用可能なタスク一覧を表示
+    cmds:
+      - task --list
+
+  setup:
+    desc: 初期セットアップ（環境変数ファイルのコピー）
+    cmds:
+      - echo "Setting up environment files..."
+      - cp -n backend/.env.example backend/.env || echo "backend/.env already exists"
+      - cp -n frontend/.env.example frontend/.env || echo "frontend/.env already exists"
+      - echo "Setup completed!"
+
+  up:
+    desc: Docker環境を起動
+    deps: [setup]
+    cmds:
+      - echo "Starting Docker containers..."
+      - docker-compose up -d
+      - echo "Containers are running!"
+      - echo "Frontend at http://localhost:5173"
+      - echo "Backend API at http://localhost:8000"
+
+  down:
+    desc: Docker環境を停止
+    cmds:
+      - echo "Stopping Docker containers..."
+      - docker-compose down
+
+  build:
+    desc: Dockerイメージをビルド
+    cmds:
+      - echo "Building Docker images..."
+      - docker-compose build
+
+  rebuild:
+    desc: 再構築して起動
+    cmds:
+      - task down
+      - task build  
+      - task up
+
+  logs:
+    desc: 全サービスのログを表示
+    cmds:
+      - docker-compose logs -f
+
+  logs-backend:
+    desc: バックエンドのログを表示
+    cmds:
+      - docker-compose logs -f {{.BACKEND_SERVICE}}
+
+  logs-frontend:
+    desc: フロントエンドのログを表示
+    cmds:
+      - docker-compose logs -f {{.FRONTEND_SERVICE}}
+
+  logs-database:
+    desc: データベースのログを表示
+    cmds:
+      - docker-compose logs -f {{.DATABASE_SERVICE}}
+
+  shell-backend:
+    desc: バックエンドコンテナにシェルでアクセス
+    cmds:
+      - docker-compose exec {{.BACKEND_SERVICE}} sh
+
+  shell-frontend:
+    desc: フロントエンドコンテナにシェルでアクセス
+    cmds:
+      - docker-compose exec {{.FRONTEND_SERVICE}} sh
+
+  shell-database:
+    desc: データベースコンテナにアクセス
+    cmds:
+      - docker-compose exec {{.DATABASE_SERVICE}} mysql -u fukupochi_user -pfukupochi_password fukupochi
+
+  shell-redis:
+    desc: Redisコンテナにアクセス
+    cmds:
+      - docker-compose exec redis redis-cli
+
+  logs-redis:
+    desc: Redisのログを表示
+    cmds:
+      - docker-compose logs -f redis
+
+  logs-mailpit:
+    desc: Mailpitのログを表示
+    cmds:
+      - docker-compose logs -f mailpit
+
+  clean:
+    desc: 未使用のDockerリソースを削除
+    cmds:
+      - echo "Cleaning up Docker resources..."
+      - docker system prune -f
+      - docker volume prune -f
+
+  status:
+    desc: コンテナの状態を確認
+    cmds:
+      - docker-compose ps
+
+  install-backend:
+    desc: Laravelの依存関係をインストール
+    cmds:
+      - docker-compose exec {{.BACKEND_SERVICE}} composer install
+
+  install-frontend:
+    desc: フロントエンドの依存関係をインストール
+    cmds:
+      - docker-compose exec {{.FRONTEND_SERVICE}} npm install
+
+  laravel-key:
+    desc: Laravel application keyを生成
+    cmds:
+      - docker-compose exec {{.BACKEND_SERVICE}} php artisan key:generate
+
+  migrate:
+    desc: データベースマイグレーション実行
+    cmds:
+      - docker-compose exec {{.BACKEND_SERVICE}} php artisan migrate
+
+  migrate-fresh:
+    desc: データベースをフレッシュマイグレーション
+    cmds:
+      - docker-compose exec {{.BACKEND_SERVICE}} php artisan migrate:fresh --seed
+
+  seed:
+    desc: シーダー実行
+    cmds:
+      - docker-compose exec {{.BACKEND_SERVICE}} php artisan db:seed
+
+  tinker:
+    desc: Laravel Tinkerを起動
+    cmds:
+      - docker-compose exec {{.BACKEND_SERVICE}} php artisan tinker
+
+  test-backend:
+    desc: バックエンドテスト実行
+    cmds:
+      - docker-compose exec {{.BACKEND_SERVICE}} php artisan test
+
+  test-frontend:
+    desc: フロントエンドテスト実行
+    cmds:
+      - docker-compose exec {{.FRONTEND_SERVICE}} npm test
+
+  dev:
+    desc: 開発環境を起動（ログ表示付き）
+    cmds:
+      - task up
+      - task logs
+
+  restart:
+    desc: サービスを再起動
+    cmds:
+      - docker-compose restart
+
+  ps:
+    desc: 実行中のコンテナを表示
+    cmds:
+      - docker-compose ps

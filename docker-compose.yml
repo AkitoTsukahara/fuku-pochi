@@ -1,0 +1,97 @@
+services:
+  # Laravel API サーバー
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fukupochi_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
+    environment:
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_DATABASE=fukupochi
+      - DB_USERNAME=fukupochi_user
+      - DB_PASSWORD=fukupochi_password
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - fukupochi_network
+
+  # SvelteKit フロントエンド
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fukupochi_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api
+      - VITE_APP_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - fukupochi_network
+
+  # MySQL データベース
+  database:
+    image: mysql:8.4
+    container_name: fukupochi_database
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: fukupochi
+      MYSQL_USER: fukupochi_user
+      MYSQL_PASSWORD: fukupochi_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+    networks:
+      - fukupochi_network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: fukupochi_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - fukupochi_network
+
+  # Mailpit（開発用メールテスト）
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: fukupochi_mailpit
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - fukupochi_network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  fukupochi_network:
+    driver: bridge

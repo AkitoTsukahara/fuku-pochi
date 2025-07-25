@@ -1,0 +1,74 @@
+# Environment files
+.env
+.env.local
+.env.production
+.env.*.local
+
+# OS Generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Laravel backend
+backend/.env
+backend/.env.backup
+backend/.env.production
+backend/.phpunit.result.cache
+backend/Homestead.json
+backend/Homestead.yaml
+backend/auth.json
+backend/npm-debug.log
+backend/yarn-error.log
+backend/node_modules/
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/vendor/
+backend/bootstrap/cache/
+
+# SvelteKit frontend
+frontend/.env
+frontend/.env.local
+frontend/.env.production.local
+frontend/node_modules/
+frontend/build/
+frontend/.svelte-kit/
+frontend/package-lock.json
+frontend/yarn.lock
+
+# Docker
+.docker/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Database
+*.sqlite
+*.sqlite3
+
+# Temporary folders
+tmp/
+temp/
