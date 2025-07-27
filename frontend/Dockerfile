@@ -1,12 +1,13 @@
 FROM node:22-alpine
 
-# 作業ディレクトリを設定
-WORKDIR /app
-
 # システムパッケージをインストール
 RUN apk add --no-cache \
     git \
     curl
+
+# 作業ディレクトリを設定してnode ユーザーに所有権を与える
+WORKDIR /app
+RUN chown node:node /app
 
 # node ユーザーに切り替え
 USER node
