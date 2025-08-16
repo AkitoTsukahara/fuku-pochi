@@ -7,7 +7,7 @@
 | フロントエンド | SvelteKit（Node.js 22 LTS） |
 | バックエンド | Laravel 12.x（PHP 8.4） |
 | データベース | MySQL 8.4 LTS |
-| テスト | Vitest（FE）・PHPUnit（BE） |
+| テスト | Vitest（FE）・PHPUnit（BE）・包括的Featureテスト |
 | デプロイ候補 | Laravel Vapor（無料プラン前提で調査中） |
 
 ## Laravel側の構成
@@ -19,11 +19,29 @@
 - **Infrastructure層**: データベース、外部API、ファイルシステム
 - **Presentation層**: コントローラとビュー（API応答）
 
-### Actionクラス設計方針
+### コントローラ設計方針 - 単一アクションコントローラ
 
-- `__invoke()` メソッド単位での単一責任
-- リクエスト → バリデーション → ユースケース実行 → レスポンス の流れ
-- 例: `IncrementStockAction`, `DecrementStockAction`, `GetChildrenStockAction`
+- **単一責任の原則**: 各コントローラは1つのAPIエンドポイントのみを担当
+- `__invoke()` メソッド単位での実装
+- リクエスト → バリデーション → ビジネスロジック実行 → レスポンス の流れ
+- 例: `CreateGroupController`, `GetChildrenController`, `UpdateChildController`
+
+### ディレクトリ構造（コントローラ）
+```
+app/Http/Controllers/Api/
+├── Groups/
+│   ├── CreateGroupController.php
+│   └── GetGroupController.php
+├── Children/
+│   ├── GetChildrenController.php
+│   ├── CreateChildController.php
+│   ├── UpdateChildController.php
+│   └── DeleteChildController.php
+└── Stock/（今後実装予定）
+    ├── GetStockController.php
+    ├── IncrementStockController.php
+    └── DecrementStockController.php
+```
 
 ## SvelteKit側の構成方針
 
@@ -50,14 +68,19 @@ src/
 project/
 ├── backend/         # Laravel プロジェクト
 │   ├── app/
-│   │   ├── Actions/       # アクションクラス
-│   │   ├── Models/        # Eloquentモデル
 │   │   ├── Http/
-│   │   │   └── Controllers/
+│   │   │   ├── Controllers/Api/  # 単一アクションコントローラ
+│   │   │   └── Requests/         # FormRequestクラス
+│   │   ├── Models/        # Eloquentモデル（HasFactory使用）
 │   │   └── Services/      # ビジネスロジック
 │   ├── database/
-│   │   └── migrations/
+│   │   ├── migrations/
+│   │   └── factories/     # モデルファクトリー
 │   └── tests/
+│       ├── Feature/       # APIエンドポイントテスト
+│       │   ├── Groups/
+│       │   └── Children/
+│       └── Unit/          # ユニットテスト
 ├── frontend/        # SvelteKit プロジェクト
 │   ├── src/
 │   │   ├── routes/
@@ -83,7 +106,7 @@ MySQL Database
 1. **単一責任の原則**: 各クラス・関数は一つの責任のみを持つ
 2. **依存性の逆転**: 抽象に依存し、具象に依存しない
 3. **疎結合**: モジュール間の依存を最小限に抑える
-4. **テスタビリティ**: ユニットテスト・統合テストが書きやすい構造
+4. **テスタビリティ**: ユニットテスト・Featureテストが書きやすい構造（各エンドポイントに専用テスト）
 5. **可読性**: コードの意図が明確で、他の開発者が理解しやすい
 
 ## セキュリティ考慮事項
