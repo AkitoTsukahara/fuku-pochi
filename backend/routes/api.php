@@ -6,6 +6,9 @@ use App\Http\Controllers\Api\Children\GetChildrenController;
 use App\Http\Controllers\Api\Children\CreateChildController;
 use App\Http\Controllers\Api\Children\UpdateChildController;
 use App\Http\Controllers\Api\Children\DeleteChildController;
+use App\Http\Controllers\Api\Stock\GetStockController;
+use App\Http\Controllers\Api\Stock\IncrementStockController;
+use App\Http\Controllers\Api\Stock\DecrementStockController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -26,3 +29,8 @@ Route::get('/groups/{token}/children', GetChildrenController::class);
 Route::post('/groups/{token}/children', CreateChildController::class);
 Route::put('/children/{id}', UpdateChildController::class);
 Route::delete('/children/{id}', DeleteChildController::class);
+
+// Stock Management API - Single Action Controllers
+Route::get('/children/{id}/stock', GetStockController::class);
+Route::post('/children/{id}/stock-increment', IncrementStockController::class);
+Route::post('/children/{id}/stock-decrement', DecrementStockController::class);
