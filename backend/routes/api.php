@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Children\DeleteChildController;
 use App\Http\Controllers\Api\Stock\GetStockController;
 use App\Http\Controllers\Api\Stock\IncrementStockController;
 use App\Http\Controllers\Api\Stock\DecrementStockController;
+use App\Http\Controllers\Api\ClothingCategories\GetClothingCategoriesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -34,3 +35,6 @@ Route::delete('/children/{id}', DeleteChildController::class);
 Route::get('/children/{id}/stock', GetStockController::class);
 Route::post('/children/{id}/stock-increment', IncrementStockController::class);
 Route::post('/children/{id}/stock-decrement', DecrementStockController::class);
+
+// Clothing Categories API - Single Action Controllers
+Route::get('/clothing-categories', GetClothingCategoriesController::class);
