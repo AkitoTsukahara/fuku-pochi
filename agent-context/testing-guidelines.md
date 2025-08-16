@@ -328,8 +328,367 @@ php artisan test
 - **テスト成功率**: 100%を維持
 - **実行速度**: 高速なテスト実行
 
-### 今後の方針
-1. **新規API実装時**: 必ずFeatureテストも同時実装
-2. **テストファースト**: 可能な限りTDD（テスト駆動開発）を採用
-3. **継続的改善**: テストケースの充実と品質向上
-4. **回帰テスト**: 既存機能の動作保証
+## クリーンアーキテクチャでのテスト戦略（2025年リファクタリング後）
+
+### テスト階層と責務
+
+#### 1. Domain層テスト（ユニットテスト）
+**対象**: Entity, ValueObject, DomainService  
+**環境**: In-memory Repository, Fake Clock  
+**目的**: ビジネスロジックの純粋性確認
+
+```php
+class GroupDomainServiceTest extends TestCase
+{
+    private GroupDomainService $service;
+    private InMemoryGroupRepository $repository;
+    private FakeUuidGenerator $uuidGenerator;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->repository = new InMemoryGroupRepository();
+        $this->uuidGenerator = new FakeUuidGenerator();
+        $this->service = new GroupDomainService($this->repository, $this->uuidGenerator);
+    }
+
+    public function test_can_create_group_with_valid_name(): void
+    {
+        $name = new Name('テストグループ');
+        
+        $group = $this->service->createGroup($name);
+        
+        $this->assertEquals('テストグループ', $group->getName()->value());
+        $this->assertNotNull($group->getShareToken());
+    }
+
+    public function test_cannot_create_group_with_empty_name(): void
+    {
+        $this->expectException(InvalidValueException::class);
+        
+        new Name('');
+    }
+}
+```
+
+#### 2. Application層テスト（統合テスト）
+**対象**: UseCase, QueryService  
+**環境**: トランザクション含む実Repository  
+**目的**: ユースケースの結合動作確認
+
+```php
+class CreateGroupUseCaseTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private CreateGroupUseCase $useCase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->useCase = app(CreateGroupUseCase::class);
+    }
+
+    public function test_can_execute_create_group_use_case(): void
+    {
+        $command = new CreateGroupCommand(new Name('統合テストグループ'));
+        
+        $response = $this->useCase->execute($command);
+        
+        $this->assertEquals('統合テストグループ', $response->name);
+        $this->assertDatabaseHas('user_groups', [
+            'name' => '統合テストグループ'
+        ]);
+    }
+
+    public function test_transaction_rollback_on_domain_exception(): void
+    {
+        // ドメイン例外が発生した場合のトランザクションロールバック確認
+        $this->expectException(BusinessRuleViolationException::class);
+        
+        $command = new CreateGroupCommand(new Name(''));
+        $this->useCase->execute($command);
+        
+        $this->assertDatabaseCount('user_groups', 0);
+    }
+}
+```
+
+#### 3. Infrastructure層テスト（Repository実装テスト）
+**対象**: EloquentRepository, ModelAdapter  
+**環境**: 実データベース  
+**目的**: データ永続化の動作確認
+
+```php
+class EloquentGroupRepositoryTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private EloquentGroupRepository $repository;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->repository = app(EloquentGroupRepository::class);
+    }
+
+    public function test_can_save_and_find_group(): void
+    {
+        $group = new Group(
+            new GroupId('test-group-id'),
+            new Name('リポジトリテスト'),
+            new ShareToken('test-token'),
+            now(),
+            now()
+        );
+
+        $this->repository->save($group);
+        $foundGroup = $this->repository->findById(new GroupId('test-group-id'));
+
+        $this->assertNotNull($foundGroup);
+        $this->assertEquals('リポジトリテスト', $foundGroup->getName()->value());
+    }
+
+    public function test_eloquent_to_domain_conversion(): void
+    {
+        $userGroup = UserGroup::factory()->create([
+            'name' => 'Eloquent変換テスト'
+        ]);
+
+        $group = $this->repository->findById(new GroupId($userGroup->id));
+
+        $this->assertInstanceOf(Group::class, $group);
+        $this->assertEquals('Eloquent変換テスト', $group->getName()->value());
+    }
+}
+```
+
+#### 4. Repository契約テスト
+**対象**: Repository interface実装  
+**環境**: 複数実装（Eloquent, InMemory）  
+**目的**: 実装差し替え可能性の保証
+
+```php
+abstract class GroupRepositoryContractTest extends TestCase
+{
+    protected GroupRepositoryInterface $repository;
+
+    abstract protected function getRepositoryImplementation(): GroupRepositoryInterface;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->repository = $this->getRepositoryImplementation();
+    }
+
+    public function test_can_save_and_find_by_id(): void
+    {
+        $group = $this->createTestGroup();
+        
+        $this->repository->save($group);
+        $foundGroup = $this->repository->findById($group->getId());
+        
+        $this->assertNotNull($foundGroup);
+        $this->assertEquals($group->getName()->value(), $foundGroup->getName()->value());
+    }
+
+    private function createTestGroup(): Group
+    {
+        return new Group(
+            new GroupId('contract-test-id'),
+            new Name('契約テスト'),
+            new ShareToken('contract-token'),
+            now(),
+            now()
+        );
+    }
+}
+
+class EloquentGroupRepositoryContractTest extends GroupRepositoryContractTest
+{
+    use RefreshDatabase;
+
+    protected function getRepositoryImplementation(): GroupRepositoryInterface
+    {
+        return app(EloquentGroupRepository::class);
+    }
+}
+
+class InMemoryGroupRepositoryContractTest extends GroupRepositoryContractTest
+{
+    protected function getRepositoryImplementation(): GroupRepositoryInterface
+    {
+        return new InMemoryGroupRepository();
+    }
+}
+```
+
+#### 5. パフォーマンステスト
+**対象**: APIエンドポイント  
+**環境**: 実環境に近い状態  
+**目的**: レスポンス時間・クエリ数の監視
+
+```php
+class PerformanceTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_api_response_time_under_threshold(): void
+    {
+        $userGroup = UserGroup::factory()->create();
+        $children = Children::factory()->count(10)->create(['user_group_id' => $userGroup->id]);
+        
+        $startTime = microtime(true);
+        
+        $response = $this->getJson("/api/groups/{$userGroup->share_token}");
+        
+        $endTime = microtime(true);
+        $responseTime = ($endTime - $startTime) * 1000; // milliseconds
+
+        $response->assertStatus(200);
+        $this->assertLessThan(500, $responseTime, 'API response time should be under 500ms');
+    }
+
+    public function test_avoid_n_plus_one_queries(): void
+    {
+        $userGroup = UserGroup::factory()->create();
+        $children = Children::factory()->count(20)->create(['user_group_id' => $userGroup->id]);
+
+        DB::enableQueryLog();
+        
+        $response = $this->getJson("/api/groups/{$userGroup->share_token}");
+        
+        $queryCount = count(DB::getQueryLog());
+        
+        $response->assertStatus(200);
+        $this->assertLessThan(5, $queryCount, 'Should avoid N+1 queries');
+    }
+}
+```
+
+### テストディレクトリ構造（更新版）
+
+```
+tests/
+├── Unit/                           # Domain層ユニットテスト
+│   ├── Domain/
+│   │   ├── Group/
+│   │   │   ├── Entity/
+│   │   │   ├── ValueObject/
+│   │   │   └── Service/
+│   │   ├── Children/
+│   │   └── Stock/
+│   └── Exception/
+├── Integration/                    # Application層統合テスト
+│   ├── UseCase/
+│   │   ├── Group/
+│   │   ├── Children/
+│   │   └── Stock/
+│   └── QueryService/
+├── Infrastructure/                 # Infrastructure層テスト
+│   ├── Repository/
+│   │   ├── EloquentGroupRepositoryTest.php
+│   │   ├── EloquentChildrenRepositoryTest.php
+│   │   └── EloquentStockRepositoryTest.php
+│   └── Adapter/
+├── Contract/                       # Repository契約テスト
+│   └── Repository/
+│       ├── GroupRepositoryContractTest.php
+│       ├── ChildrenRepositoryContractTest.php
+│       └── StockRepositoryContractTest.php
+├── Performance/                    # パフォーマンステスト
+│   ├── ApiPerformanceTest.php
+│   └── QueryPerformanceTest.php
+└── Feature/                        # APIエンドポイントテスト（既存）
+    ├── Groups/
+    ├── Children/
+    └── Stock/
+```
+
+### テスト実行戦略
+
+#### レベル別実行
+```bash
+# Domain層ユニットテスト（高速）
+php artisan test tests/Unit/Domain/
+
+# Application層統合テスト（中速）
+php artisan test tests/Integration/
+
+# Infrastructure層テスト（低速）
+php artisan test tests/Infrastructure/
+
+# Repository契約テスト（確実性）
+php artisan test tests/Contract/
+
+# パフォーマンステスト（監視）
+php artisan test tests/Performance/
+
+# Feature テスト（回帰防止）
+php artisan test tests/Feature/
+```
+
+#### CI/CD での実行順序
+1. **Unit tests** - 高速フィードバック
+2. **Integration tests** - ユースケース確認
+3. **Contract tests** - 実装互換性確認
+4. **Feature tests** - API動作確認
+5. **Performance tests** - 性能監視
+
+### Mock・Fake実装
+
+#### テスト用In-Memory Repository
+```php
+class InMemoryGroupRepository implements GroupRepositoryInterface
+{
+    private array $groups = [];
+
+    public function save(Group $group): void
+    {
+        $this->groups[$group->getId()->value()] = $group;
+    }
+
+    public function findById(GroupId $groupId): ?Group
+    {
+        return $this->groups[$groupId->value()] ?? null;
+    }
+}
+```
+
+#### テスト用Fake Clock
+```php
+class FakeClock implements ClockInterface
+{
+    private Carbon $fixedTime;
+
+    public function __construct(Carbon $fixedTime)
+    {
+        $this->fixedTime = $fixedTime;
+    }
+
+    public function now(): Carbon
+    {
+        return $this->fixedTime;
+    }
+}
+```
+
+### 品質指標（更新版）
+
+#### カバレッジ目標
+- **Domain層**: 95%以上（ビジネスロジック）
+- **Application層**: 90%以上（ユースケース）
+- **Infrastructure層**: 80%以上（データアクセス）
+- **Controller層**: 85%以上（エンドポイント）
+
+#### パフォーマンス目標
+- **API レスポンス時間**: 500ms以下
+- **データベースクエリ数**: エンドポイント当たり5回以下
+- **メモリ使用量**: リクエスト当たり32MB以下
+
+### 今後の方針（更新版）
+1. **層別テスト**: 各層の責務に応じた適切なテスト実装
+2. **契約テスト**: Repository実装差し替え可能性の保証
+3. **パフォーマンス監視**: 継続的な性能測定
+4. **テストピラミッド**: Unit > Integration > Feature の適切な比率維持
+5. **CI/CD統合**: 段階的テスト実行による効率的フィードバック

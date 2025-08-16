@@ -12,12 +12,35 @@
 
 ## Laravel側の構成
 
-### DDD + クリーンアーキテクチャの粒度
+### クリーンアーキテクチャ実装方針（2025年リファクタリング）
 
-- **Domain層**: エンティティとビジネスロジック（UserGroup, Children, StockItems）
-- **Application層**: ユースケース実装
-- **Infrastructure層**: データベース、外部API、ファイルシステム
-- **Presentation層**: コントローラとビュー（API応答）
+#### 依存方向: App → Domain ← Infra
+
+#### 各層の責務と実装方針
+
+**Domain層** (`backend/app/domain/`)
+- **責務**: ビジネスルール・ドメインロジック・不変条件
+- **実装**: 純粋PHP、Laravel非依存
+- **構成**: Entity, ValueObject, DomainService, Repository interfaces, DomainEvent
+- **例**: `Group`, `Child`, `StockItem`, `GroupDomainService`
+
+**Application層** (`backend/app/UseCase/`)
+- **責務**: ユースケース実行・トランザクション管理・DTO変換
+- **実装**: CQRS（Command/Query分離）
+- **構成**: UseCase（更新系）, QueryService（参照系）, DTO
+- **例**: `CreateGroupUseCase`, `GetGroupQueryService`
+
+**Infrastructure層** (`backend/app/infra/`)
+- **責務**: データ永続化・外部サービス・技術的関心事
+- **実装**: Repository実装、Eloquentアダプター
+- **構成**: EloquentRepository, ModelAdapter, SystemClock
+- **例**: `EloquentGroupRepository`, `UserGroupModelAdapter`
+
+**Presentation層** (`backend/app/Http/Controllers/`)
+- **責務**: HTTPリクエスト/レスポンス・認証・バリデーション
+- **実装**: UseCase/QueryService呼び出しのみ
+- **構成**: 薄化されたController、FormRequest、ExceptionMapper
+- **例**: `CreateGroupController`（UseCase呼び出しのみ）
 
 ### コントローラ設計方針 - 単一アクションコントローラ
 
@@ -26,21 +49,62 @@
 - リクエスト → バリデーション → ビジネスロジック実行 → レスポンス の流れ
 - 例: `CreateGroupController`, `GetChildrenController`, `UpdateChildController`
 
-### ディレクトリ構造（コントローラ）
+### ディレクトリ構造（クリーンアーキテクチャ）
 ```
-app/Http/Controllers/Api/
-├── Groups/
-│   ├── CreateGroupController.php
-│   └── GetGroupController.php
-├── Children/
-│   ├── GetChildrenController.php
-│   ├── CreateChildController.php
-│   ├── UpdateChildController.php
-│   └── DeleteChildController.php
-└── Stock/（今後実装予定）
-    ├── GetStockController.php
-    ├── IncrementStockController.php
-    └── DecrementStockController.php
+backend/app/
+├── Http/Controllers/Api/        # Presentation層（薄化済み）
+│   ├── Groups/
+│   │   ├── CreateGroupController.php
+│   │   └── GetGroupController.php
+│   ├── Children/
+│   │   ├── CreateChildController.php
+│   │   ├── UpdateChildController.php
+│   │   ├── DeleteChildController.php
+│   │   └── GetChildrenController.php
+│   └── Stock/
+│       ├── GetStockController.php
+│       ├── IncrementStockController.php
+│       └── DecrementStockController.php
+├── UseCase/                     # Application層
+│   ├── Group/
+│   │   ├── Command/             # 更新系UseCase
+│   │   │   ├── CreateGroupUseCase.php
+│   │   │   └── DTO/
+│   │   └── Query/               # 参照系QueryService
+│   │       ├── GetGroupQueryService.php
+│   │       └── DTO/
+│   ├── Children/
+│   └── Stock/
+├── domain/                      # Domain層（Laravel非依存）
+│   ├── Group/
+│   │   ├── Entity/              # ドメインエンティティ
+│   │   │   └── Group.php
+│   │   ├── ValueObject/         # 値オブジェクト
+│   │   │   ├── GroupId.php
+│   │   │   └── ShareToken.php
+│   │   ├── Repository/          # Repository interfaces
+│   │   │   └── GroupRepositoryInterface.php
+│   │   └── Service/             # ドメインサービス
+│   │       └── GroupDomainService.php
+│   ├── Children/
+│   ├── Stock/
+│   └── Shared/                  # 共通ドメイン要素
+│       ├── ValueObject/
+│       ├── Exception/
+│       └── Clock/
+└── infra/                       # Infrastructure層
+    ├── Group/
+    │   └── Persistence/
+    │       ├── EloquentGroupRepository.php
+    │       └── Adapter/
+    │           └── UserGroupModelAdapter.php
+    ├── Children/
+    ├── Stock/
+    └── Shared/
+        ├── Clock/
+        │   └── SystemClock.php
+        └── Transaction/
+            └── EloquentTransactionManager.php
 ```
 
 ## SvelteKit側の構成方針

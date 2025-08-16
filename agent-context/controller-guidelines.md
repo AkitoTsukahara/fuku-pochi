@@ -165,17 +165,184 @@ if (!$userGroup) {
 }
 ```
 
-### 今後の実装指針
-1. **全ての新しいAPIエンドポイント**は単一アクションコントローラとして実装
-2. **既存のマルチアクションコントローラ**は段階的に単一アクションコントローラに分割
-3. **ディレクトリ構造**は機能別に整理（Groups/, Children/, Stock/, etc.）
-4. **レスポンス形式**は一貫性を保つ
-5. **適切なHTTPステータスコード**を使用
-6. **日本語エラーメッセージ**でユーザビリティを向上
+## クリーンアーキテクチャでのController実装（2025年リファクタリング後）
 
-### 注意事項
-- `__invoke()` メソッドを使用して単一アクションを実装
-- 適切な型宣言（引数・戻り値）を行う
-- FormRequestクラスでバリデーションを分離
-- レスポンス形式の統一を維持
-- エラーハンドリングの一貫性を保つ
+### Controller薄化の原則
+
+**Controller責務の限定:**
+1. HTTPリクエスト/レスポンス処理
+2. UseCase/QueryService呼び出し
+3. 例外ハンドリング・エラーマッピング
+4. 認証・認可
+
+**Controller禁止事項:**
+- ビジネスロジックの直接実装
+- Eloquentモデルの直接操作
+- データベースクエリの実行
+- 複雑なデータ変換処理
+
+### 薄化されたController実装パターン
+
+#### 基本構造（UseCase呼び出し）
+```php
+class CreateGroupController extends Controller
+{
+    public function __construct(
+        private readonly CreateGroupUseCase $createGroupUseCase,
+        private readonly GroupExceptionMapper $exceptionMapper
+    ) {}
+
+    public function __invoke(CreateGroupRequest $request): JsonResponse
+    {
+        try {
+            $command = CreateGroupCommand::fromRequest($request->validated());
+            $response = $this->createGroupUseCase->execute($command);
+            
+            return $this->successResponse(
+                'グループが正常に作成されました',
+                $response,
+                Response::HTTP_CREATED
+            );
+            
+        } catch (DomainException $e) {
+            return $this->handleDomainException($e, $this->exceptionMapper);
+        }
+    }
+}
+```
+
+#### 参照系Controller（QueryService呼び出し）
+```php
+class GetGroupController extends Controller
+{
+    public function __construct(
+        private readonly GetGroupQueryService $getGroupQueryService,
+        private readonly GroupExceptionMapper $exceptionMapper
+    ) {}
+
+    public function __invoke(string $token): JsonResponse
+    {
+        try {
+            $query = GetGroupByTokenQuery::fromRequest($token);
+            $response = $this->getGroupQueryService->getByShareToken($query);
+            
+            if (!$response) {
+                return $this->errorResponse(
+                    '指定されたトークンのグループが見つかりません',
+                    Response::HTTP_NOT_FOUND
+                );
+            }
+            
+            return $this->successResponse(
+                'グループ情報を取得しました',
+                $response
+            );
+            
+        } catch (DomainException $e) {
+            return $this->handleDomainException($e, $this->exceptionMapper);
+        }
+    }
+}
+```
+
+### Controller基底クラス強化
+
+#### 共通メソッド追加
+```php
+abstract class Controller extends BaseController
+{
+    protected function successResponse(
+        string $message,
+        array|ResponseDTO $data,
+        int $statusCode = Response::HTTP_OK
+    ): JsonResponse {
+        $responseData = $data instanceof ResponseDTO ? $data->toArray() : $data;
+        
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $responseData
+        ], $statusCode);
+    }
+
+    protected function errorResponse(
+        string $message,
+        int $statusCode = Response::HTTP_INTERNAL_SERVER_ERROR,
+        mixed $data = null
+    ): JsonResponse {
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            'data' => $data
+        ], $statusCode);
+    }
+
+    protected function handleDomainException(
+        DomainException $exception,
+        ExceptionMapperInterface $mapper
+    ): JsonResponse {
+        $httpException = $mapper->mapToHttpException($exception);
+        
+        return $this->errorResponse(
+            $httpException->getMessage(),
+            $httpException->getStatusCode()
+        );
+    }
+}
+```
+
+### レスポンス形式統一（継続）
+
+#### 成功レスポンス
+```json
+{
+  "success": true,
+  "message": "操作が正常に完了しました",
+  "data": {
+    "id": "group-123",
+    "name": "テストグループ"
+  }
+}
+```
+
+#### エラーレスポンス（強化版）
+```json
+{
+  "success": false,
+  "message": "ユーザーフレンドリーなメッセージ",
+  "error_code": "BUSINESS_RULE_VIOLATION",
+  "trace_id": "trace_674a1b2c3d4e5f",
+  "data": null
+}
+```
+
+### 実装指針（更新版）
+1. **UseCase/QueryService経由**でのビジネスロジック実行
+2. **例外マッピング**による統一的なエラーハンドリング
+3. **DTO変換**でリクエスト/レスポンス処理
+4. **レスポンス形式**の互換性維持
+5. **trace_id**による追跡可能性確保
+6. **構造化ログ**による運用性向上
+
+### 段階的移行戦略
+
+#### Phase 1: UseCase/QueryService実装
+1. Domain層・Application層の実装
+2. Infrastructure層でRepository実装
+
+#### Phase 2: Controller薄化
+1. 既存Controllerの動作確認
+2. UseCase/QueryService呼び出しへの置き換え
+3. レスポンス形式の互換性確認
+
+#### Phase 3: テスト修正
+1. 既存テストの動作確認
+2. 新しいアーキテクチャでのテスト追加
+3. 統合テスト・契約テストの実装
+
+### 注意事項（更新版）
+- Controller層は**最小限の責務**のみ担当
+- **UseCase/QueryService**経由でビジネスロジックを実行
+- **例外マッピング**で統一的なエラーハンドリング
+- **既存レスポンス形式**の完全互換性を維持
+- **trace_id**による問題追跡可能性を確保
