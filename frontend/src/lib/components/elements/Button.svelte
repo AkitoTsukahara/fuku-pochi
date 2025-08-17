@@ -1,12 +1,17 @@
 <script lang="ts">
-	export let variant: 'primary' | 'secondary' | 'icon' = 'primary';
-	export let size: 'sm' | 'md' | 'lg' = 'md';
+	export let variant: 'primary' | 'secondary' | 'icon' | 'outline' = 'primary';
+	export let size: 'sm' | 'md' | 'lg' | 'small' = 'md';
 	export let disabled: boolean = false;
+	export let type: 'button' | 'submit' | 'reset' = 'button';
+	
+	// sizeのaliasを処理
+	$: actualSize = size === 'small' ? 'sm' : size;
 </script>
 
 <button 
-	class="btn btn--{variant} btn--{size}" 
+	class="btn btn--{variant} btn--{actualSize}" 
 	{disabled}
+	{type}
 	on:click
 >
 	<slot />
@@ -71,5 +76,16 @@
 
 	.btn--icon:hover:not(:disabled) {
 		background-color: #f0f0f0;
+	}
+	
+	.btn--outline {
+		background-color: transparent;
+		color: #4a90e2;
+		border: 2px solid #4a90e2;
+	}
+	
+	.btn--outline:hover:not(:disabled) {
+		background-color: #4a90e2;
+		color: white;
 	}
 </style>
