@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import Header from '$lib/components/sections/Header.svelte';
 	import ShareUrl from '$lib/components/forms/ShareUrl.svelte';
+	import ChildrenList from '$lib/components/lists/ChildrenList.svelte';
 	import Button from '$lib/components/elements/Button.svelte';
 	
 	export let data: PageData;
@@ -59,22 +60,7 @@
 					</Button>
 				</div>
 				
-				{#if data.children && data.children.length > 0}
-					<div class="children-list">
-						{#each data.children as child}
-							<a href="/group/{data.token}/child/{child.id}" class="child-card">
-								<div class="child-icon">👶</div>
-								<div class="child-info">
-									<h4>{child.name}</h4>
-									<p>タップして在庫管理へ</p>
-								</div>
-								<div class="arrow">→</div>
-							</a>
-						{/each}
-					</div>
-				{:else}
-					<p class="no-children">まだ子どもが登録されていません</p>
-				{/if}
+				<ChildrenList children={data.children} token={data.token} />
 			</div>
 		{/if}
 		
@@ -205,63 +191,6 @@
 		font-weight: 600;
 	}
 	
-	.children-list {
-		display: grid;
-		gap: 1rem;
-	}
-	
-	.child-card {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		padding: 1rem;
-		background: #f8f8f8;
-		border-radius: 8px;
-		text-decoration: none;
-		transition: all 0.2s;
-		border: 2px solid transparent;
-	}
-	
-	.child-card:hover {
-		background: white;
-		border-color: #87ceeb;
-		transform: translateX(4px);
-	}
-	
-	.child-icon {
-		font-size: 2rem;
-		flex-shrink: 0;
-	}
-	
-	.child-info {
-		flex: 1;
-	}
-	
-	.child-info h4 {
-		color: #333;
-		font-size: 1.1rem;
-		margin: 0 0 0.25rem;
-		font-weight: 600;
-	}
-	
-	.child-info p {
-		color: #666;
-		font-size: 0.9rem;
-		margin: 0;
-	}
-	
-	.arrow {
-		color: #999;
-		font-size: 1.5rem;
-		flex-shrink: 0;
-	}
-	
-	.no-children {
-		text-align: center;
-		color: #999;
-		padding: 2rem;
-		font-size: 0.95rem;
-	}
 	
 	.next-action {
 		text-align: center;
