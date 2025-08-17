@@ -187,12 +187,13 @@
 	
 	.child-item {
 		background: #f8f8f8;
-		border-radius: 8px;
+		border-radius: clamp(6px, 2vw, 8px);
 		border: 2px solid transparent;
 		transition: all 0.2s;
 		display: flex;
 		align-items: center;
-		padding: 0.75rem;
+		padding: var(--spacing-md, 0.75rem);
+		min-height: 60px;
 	}
 	
 	.child-item:hover:not(.editing) {

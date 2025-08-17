@@ -1,5 +1,8 @@
 /* Global styles for ふくぽち */
 
+/* レスポンシブデザイン拡張 */
+@import './lib/styles/responsive.css';
+
 /* CSS Reset and Base Styles */
 * {
 	box-sizing: border-box;

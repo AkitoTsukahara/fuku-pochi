@@ -1,0 +1,266 @@
+/* レスポンシブデザイン - ふくぽち専用設定 */
+
+/* ==================================================
+   ブレークポイント定義
+   ================================================== */
+/* 
+  - xs: ~374px (小型スマートフォン)
+  - sm: 375px~479px (iPhone標準)
+  - md: 480px~767px (大型スマートフォン)
+  - lg: 768px~1023px (タブレット)
+  - xl: 1024px~ (デスクトップ)
+*/
+
+/* ==================================================
+   ベースレイアウト調整
+   ================================================== */
+.container {
+  /* スマートフォンでの左右余白を最小化 */
+  padding-left: clamp(0.75rem, 4vw, 1rem);
+  padding-right: clamp(0.75rem, 4vw, 1rem);
+}
+
+/* ==================================================
+   フォントサイズの最適化
+   ================================================== */
+:root {
+  /* フルードタイポグラフィー */
+  --text-xs: clamp(0.75rem, 2.5vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 3vw, 1rem);
+  --text-base: clamp(1rem, 3.5vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 4vw, 1.25rem);
+  --text-xl: clamp(1.25rem, 4.5vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 5vw, 1.875rem);
+  
+  /* スペーシング */
+  --spacing-xs: clamp(0.25rem, 1vw, 0.5rem);
+  --spacing-sm: clamp(0.5rem, 2vw, 0.75rem);
+  --spacing-md: clamp(0.75rem, 3vw, 1rem);
+  --spacing-lg: clamp(1rem, 4vw, 1.5rem);
+  --spacing-xl: clamp(1.5rem, 5vw, 2rem);
+}
+
+/* ==================================================
+   タッチフレンドリーなボタンサイズ
+   ================================================== */
+.btn,
+button,
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--text-base);
+  border-radius: clamp(6px, 2vw, 8px);
+}
+
+/* より大きなタッチターゲット */
+.btn-lg,
+.touch-target-lg {
+  min-height: 52px;
+  min-width: 52px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--text-lg);
+}
+
+/* ==================================================
+   グリッドシステムの改良
+   ================================================== */
+.responsive-grid {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+/* 小型スマートフォン: 2列固定 */
+@media (max-width: 374px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+  }
+  
+  .container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+/* 標準スマートフォン: 2-3列 */
+@media (min-width: 375px) and (max-width: 479px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 大型スマートフォン: 3列 */
+@media (min-width: 480px) and (max-width: 767px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* タブレット: 4列 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+/* デスクトップ: 4列（最大幅制限） */
+@media (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+}
+
+/* ==================================================
+   横向き表示対応
+   ================================================== */
+@media (orientation: landscape) and (max-width: 767px) {
+  /* 横向きスマートフォンでのヘッダー高さ調整 */
+  .header-compact {
+    padding-top: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+  }
+  
+  /* より多くの列を表示 */
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  /* フォントサイズを若干小さく */
+  :root {
+    --text-base: clamp(0.875rem, 3vw, 1rem);
+    --text-lg: clamp(1rem, 3.5vw, 1.125rem);
+  }
+}
+
+/* ==================================================
+   iOS Safari対応
+   ================================================== */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safariでのズーム防止 */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  
+  /* iOS Safariでのボタンのデフォルトスタイルを無効化 */
+  button,
+  .btn {
+    -webkit-appearance: none;
+    border-radius: 8px;
+  }
+}
+
+/* ==================================================
+   高解像度ディスプレイ対応
+   ================================================== */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* アイコンやボーダーをシャープに */
+  .icon,
+  .border-sharp {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+}
+
+/* ==================================================
+   アクセシビリティ: reduced motion対応
+   ================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==================================================
+   ダークモード対応（将来拡張用）
+   ================================================== */
+@media (prefers-color-scheme: dark) {
+  /* 将来のダークモード対応のプレースホルダー */
+  :root {
+    --bg-primary: #1a1a1a;
+    --text-primary: #ffffff;
+    --border-color: #333333;
+  }
+}
+
+/* ==================================================
+   パフォーマンス最適化
+   ================================================== */
+/* GPUアクセラレーション */
+.accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* レイアウトシフト防止 */
+.aspect-ratio-1-1 {
+  aspect-ratio: 1 / 1;
+}
+
+.aspect-ratio-16-9 {
+  aspect-ratio: 16 / 9;
+}
+
+/* ==================================================
+   ユーティリティクラス
+   ================================================== */
+.mobile-only {
+  display: block;
+}
+
+.desktop-only {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none;
+  }
+  
+  .desktop-only {
+    display: block;
+  }
+}
+
+/* スペーシングユーティリティ */
+.p-responsive {
+  padding: var(--spacing-md);
+}
+
+.m-responsive {
+  margin: var(--spacing-md);
+}
+
+.gap-responsive {
+  gap: var(--spacing-md);
+}
+
+/* ==================================================
+   フォーカス管理
+   ================================================== */
+.focus-ring {
+  outline: 2px solid #4a90e2;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* タッチデバイスでのフォーカス表示を調整 */
+@media (pointer: coarse) {
+  .focus-ring {
+    outline-width: 3px;
+    outline-offset: 3px;
+  }
+}

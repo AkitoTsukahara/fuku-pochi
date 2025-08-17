@@ -5,6 +5,7 @@
 	import Header from '$lib/components/sections/Header.svelte';
 	import ChildSelector from '$lib/components/navigation/ChildSelector.svelte';
 	import StockGrid from '$lib/components/stock/StockGrid.svelte';
+	import BackButton from '$lib/components/navigation/BackButton.svelte';
 	import Button from '$lib/components/elements/Button.svelte';
 	
 	export let data: PageData;
@@ -52,12 +53,7 @@
 	<div class="content">
 		<!-- 戻るボタン -->
 		<div class="navigation">
-			<a href="/group/{data.token}" class="back-link">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M19 12H5M12 19l-7-7 7-7"/>
-				</svg>
-				グループに戻る
-			</a>
+			<BackButton href="/group/{data.token}" fallbackText="グループに戻る" />
 		</div>
 		
 		<!-- 子ども選択（複数いる場合のみ表示） -->
