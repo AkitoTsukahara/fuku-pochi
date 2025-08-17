@@ -107,24 +107,32 @@ backend/app/
             └── EloquentTransactionManager.php
 ```
 
-## SvelteKit側の構成方針
+## SvelteKit側の構成方針（2025年仕様変更）
 
 ```
 src/
-├── routes/          # ページコンポーネント
+├── routes/              # ページコンポーネント（+page.svelte, +page.ts, +page.server.ts）
 ├── lib/
-│   ├── components/  # 再利用可能なコンポーネント
-│   ├── stores/      # 状態管理（Svelte stores）
-│   ├── api/         # API通信ロジック
-│   └── utils/       # ユーティリティ関数
-└── app.html         # HTMLテンプレート
+│   ├── api/             # API通信ライブラリ（SSR/CSR対応）
+│   ├── components/      # 再利用可能なコンポーネント
+│   ├── data/            # 型定義
+│   ├── utils/           # ユーティリティ関数
+│   └── examples/        # 使用例・ベストプラクティス
+└── app.html             # HTMLテンプレート
 ```
 
-### 状態管理
+### データ管理方針（Store不使用）
 
-- Svelte stores を使用
-- ストック数の状態管理
-- ユーザーグループ・子どもデータの管理
+**採用方針**: SvelteKitの標準的なデータフロー
+- **load関数**: データフェッチ（SSR/CSR両対応）
+- **Form Actions**: データ更新・作成・削除
+- **invalidate**: 更新後のデータ再フェッチ
+- **サーバーが真実の源泉**: クライアント状態管理なし
+
+**不採用とした理由**:
+- ~~Svelte stores~~ → データ一貫性管理が複雑
+- ~~クライアント状態管理~~ → サーバー・クライアント同期困難
+- ~~リアクティブストア~~ → SvelteKit設計思想と不整合
 
 ## ファイル構成例
 
