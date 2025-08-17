@@ -1,0 +1,21 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(12, 6)">
+    <!-- Sock cuff -->
+    <rect x="4" y="2" width="16" height="6" rx="2" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2"/>
+    
+    <!-- Sock leg -->
+    <path d="M6 8 L6 20 C6 22 7 24 9 24 L15 24 C17 24 18 22 18 20 L18 8" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Sock foot -->
+    <path d="M6 24 L6 28 C6 30 8 32 10 32 L20 32 C22 32 24 30 24 28 C24 26 22 24 20 24 L15 24" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Heel decoration -->
+    <circle cx="8" cy="26" r="1.5" fill="#ffd54f" opacity="0.8"/>
+    
+    <!-- Cuff stripes -->
+    <line x1="6" y1="5" x2="18" y2="5" stroke="#87ceeb" stroke-width="1" opacity="0.6"/>
+  </g>
+</svg>

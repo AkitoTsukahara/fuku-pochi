@@ -2,25 +2,13 @@
 	import { enhance } from '$app/forms';
 	import type { ClothingCategory, StockItem } from '$lib/data/types';
 	import Button from '$lib/components/elements/Button.svelte';
+	import ClothingIcon from '$lib/components/icons/ClothingIcon.svelte';
 	
 	export let category: ClothingCategory;
 	export let stockItem: StockItem | undefined = undefined;
 	export let loading: boolean = false;
 	
-	// アイコンマッピング（絵文字を使用）
-	const categoryIcons: Record<string, string> = {
-		'1': '👕',  // Tシャツ
-		'2': '👖',  // ズボン
-		'3': '🧦',  // 靴下
-		'4': '🤏',  // ハンカチ
-		'5': '👙',  // 肌着
-		'6': '👒',  // ぼうし
-		'7': '🩱',  // 水着セット
-		'8': '🛍️'   // ビニール袋
-	};
-	
 	$: currentStock = stockItem?.quantity || 0;
-	$: icon = categoryIcons[category.id] || '👕';
 	$: canDecrement = currentStock > 0;
 	
 	let incrementing = false;
@@ -29,8 +17,12 @@
 
 <div class="stock-card">
 	<div class="stock-header">
-		<div class="category-icon" role="img" aria-label={category.name}>
-			{icon}
+		<div class="category-icon">
+			<ClothingIcon 
+				categoryId={category.id} 
+				categoryName={category.name}
+				size="lg"
+			/>
 		</div>
 		<div class="stock-count" class:zero={currentStock === 0}>
 			{currentStock}
@@ -126,8 +118,11 @@
 	}
 	
 	.category-icon {
-		font-size: 2.5rem;
-		line-height: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 3rem;
+		height: 3rem;
 		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 	}
 	
@@ -230,7 +225,8 @@
 		}
 		
 		.category-icon {
-			font-size: 2rem;
+			width: 2.5rem;
+			height: 2.5rem;
 		}
 		
 		.stock-count {

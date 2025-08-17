@@ -1,0 +1,20 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(6, 8)">
+    <!-- T-shirt body -->
+    <path d="M8 12 L8 30 C8 31.5 9 32 10 32 L26 32 C27 32 28 31.5 28 30 L28 12" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- T-shirt sleeves -->
+    <path d="M8 12 L4 14 C3 14.5 3 16.5 4 17 L8 18" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M28 12 L32 14 C33 14.5 33 16.5 32 17 L28 18" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Neckline -->
+    <path d="M12 8 C12 6 14 4 18 4 C22 4 24 6 24 8 L24 12 L12 12 Z" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Decorative accent -->
+    <circle cx="18" cy="20" r="2" fill="#ffd54f" opacity="0.8"/>
+  </g>
+</svg>

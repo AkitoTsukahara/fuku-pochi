@@ -1,0 +1,19 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(6, 8)">
+    <!-- Hat brim -->
+    <ellipse cx="18" cy="24" rx="16" ry="4" 
+             fill="#faf9f7" stroke="#87ceeb" stroke-width="2"/>
+    
+    <!-- Hat crown -->
+    <path d="M8 24 C8 24 8 12 10 8 C12 4 16 2 18 2 C20 2 24 4 26 8 C28 12 28 24 28 24" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Hat band -->
+    <ellipse cx="18" cy="20" rx="10" ry="2" 
+             fill="#ffd54f" opacity="0.8"/>
+    
+    <!-- Decorative button/pin -->
+    <circle cx="18" cy="8" r="2" fill="#ffd54f" opacity="0.9"/>
+    <circle cx="18" cy="8" r="1" fill="#87ceeb" opacity="0.7"/>
+  </g>
+</svg>

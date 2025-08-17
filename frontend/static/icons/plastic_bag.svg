@@ -1,0 +1,27 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(10, 6)">
+    <!-- Bag body -->
+    <path d="M4 12 L4 30 C4 32 6 34 8 34 L20 34 C22 34 24 32 24 30 L24 12" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Bag handles -->
+    <path d="M6 12 C6 8 8 6 10 6 L18 6 C20 6 22 8 22 12" 
+          fill="none" stroke="#87ceeb" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Left handle -->
+    <path d="M8 6 C8 4 9 2 11 2 C13 2 14 4 14 6" 
+          fill="none" stroke="#87ceeb" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Right handle -->
+    <path d="M14 6 C14 4 15 2 17 2 C19 2 20 4 20 6" 
+          fill="none" stroke="#87ceeb" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Decorative crinkle lines -->
+    <path d="M8 16 L20 16 M8 20 L20 20 M8 24 L20 24" 
+          stroke="#87ceeb" stroke-width="0.5" opacity="0.4"/>
+    
+    <!-- Tie/closure -->
+    <ellipse cx="14" cy="10" rx="3" ry="1.5" 
+             fill="#ffd54f" opacity="0.8"/>
+  </g>
+</svg>

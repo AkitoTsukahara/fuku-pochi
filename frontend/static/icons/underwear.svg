@@ -1,0 +1,21 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(8, 8)">
+    <!-- Tank top body -->
+    <path d="M6 8 L6 26 C6 28 7 30 9 30 L23 30 C25 30 26 28 26 26 L26 8" 
+          fill="#faf9f7" stroke="#87ceeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Tank top straps -->
+    <path d="M6 8 C6 6 8 4 10 4 L10 8" 
+          fill="none" stroke="#87ceeb" stroke-width="2" stroke-linecap="round"/>
+    <path d="M26 8 C26 6 24 4 22 4 L22 8" 
+          fill="none" stroke="#87ceeb" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Neckline -->
+    <path d="M10 8 C10 6 12 4 16 4 C20 4 22 6 22 8" 
+          fill="none" stroke="#87ceeb" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Decorative heart -->
+    <path d="M14 14 C14 12.5 15.5 12 16 13 C16.5 12 18 12.5 18 14 C18 15.5 16 17 16 17 C16 17 14 15.5 14 14 Z" 
+          fill="#ffd54f" opacity="0.8"/>
+  </g>
+</svg>
