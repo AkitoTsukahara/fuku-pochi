@@ -8,7 +8,7 @@
 	export let stockItem: StockItem | undefined = undefined;
 	export let loading: boolean = false;
 	
-	$: currentStock = stockItem?.quantity || 0;
+	$: currentStock = stockItem?.current_count || 0;
 	$: canDecrement = currentStock > 0;
 	
 	let incrementing = false;

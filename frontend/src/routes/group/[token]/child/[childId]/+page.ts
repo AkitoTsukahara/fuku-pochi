@@ -1,16 +1,20 @@
 import type { PageLoad } from './$types';
-import { stockApi, childrenApi, categoriesApi, groupsApi } from '$lib';
+import { stockApi, childrenApi, groupsApi } from '$lib';
 import { error } from '@sveltejs/kit';
 
 export const load: PageLoad = async ({ params, fetch }) => {
 	try {
-		// 子ども情報、在庫データ、カテゴリ一覧、グループの子ども一覧を並列で取得
-		const [child, stockItems, categories, allChildren] = await Promise.all([
+		// 子ども情報、在庫データ、グループの子ども一覧を並列で取得
+		const [child, stockData, allChildren] = await Promise.all([
 			childrenApi.getChild(params.childId, fetch),
 			stockApi.getStock(params.childId, fetch),
-			categoriesApi.getCategories(fetch),
 			groupsApi.getGroupChildren(params.token, fetch)
 		]);
+		
+		// stockDataから stock_items 配列とカテゴリ情報を抽出
+		const stockItems = stockData.stock_items;
+		const categories = stockItems.map(item => item.clothing_category)
+			.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 		
 		return {
 			child,

@@ -32,6 +32,11 @@ export const actions: Actions = {
 				throw error;
 			}
 			
+			// SvelteKitのredirect関数が投げるRedirectオブジェクトの場合
+			if (error && typeof error === 'object' && 'status' in error && (error as any).status === 303) {
+				throw error;
+			}
+			
 			// エラーの場合
 			console.error('Failed to create group:', error);
 			return fail(500, {

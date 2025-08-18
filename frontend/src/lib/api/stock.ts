@@ -1,14 +1,20 @@
 import { apiClient } from './client.js';
 import type { 
 	StockItem, 
+	StockResponse,
 	IncrementStockRequest,
 	DecrementStockRequest
 } from '$lib/data/types.js';
 
 export const stockApi = {
 	// Get all stock items for a child (for load functions)
-	getChildStock: async (childId: string, fetch?: typeof window.fetch): Promise<StockItem[]> => {
-		return apiClient.get<StockItem[]>(`/children/${childId}/stock`, fetch);
+	getChildStock: async (childId: string, fetch?: typeof window.fetch): Promise<StockResponse> => {
+		return apiClient.get<StockResponse>(`/children/${childId}/stock`, fetch);
+	},
+
+	// Alias for getChildStock (for backward compatibility)
+	getStock: async (childId: string, fetch?: typeof window.fetch): Promise<StockResponse> => {
+		return apiClient.get<StockResponse>(`/children/${childId}/stock`, fetch);
 	},
 
 	// Increment stock

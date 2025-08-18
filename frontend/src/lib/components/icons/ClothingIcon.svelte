@@ -1,18 +1,18 @@
 <script lang="ts">
-	export let categoryId: string;
+	export let categoryId: number;
 	export let size: 'sm' | 'md' | 'lg' = 'md';
 	export let categoryName: string = '';
 	
 	// カテゴリIDとアイコンファイルのマッピング
-	const iconMapping: Record<string, string> = {
-		'1': '/icons/tshirt.svg',        // Tシャツ
-		'2': '/icons/pants.svg',         // ズボン
-		'3': '/icons/socks.svg',         // 靴下
-		'4': '/icons/handkerchief.svg',  // ハンカチ
-		'5': '/icons/underwear.svg',     // 肌着
-		'6': '/icons/hat.svg',           // ぼうし
-		'7': '/icons/swimwear.svg',      // 水着セット
-		'8': '/icons/plastic_bag.svg'    // ビニール袋
+	const iconMapping: Record<number, string> = {
+		1: '/icons/tshirt.svg',        // Tシャツ
+		2: '/icons/pants.svg',         // ズボン
+		3: '/icons/socks.svg',         // 靴下
+		4: '/icons/handkerchief.svg',  // ハンカチ
+		5: '/icons/underwear.svg',     // 肌着
+		6: '/icons/hat.svg',           // ぼうし
+		7: '/icons/swimwear.svg',      // 水着セット
+		8: '/icons/plastic_bag.svg'    // ビニール袋
 	};
 	
 	// サイズクラスのマッピング

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Groups\CreateGroupController;
 use App\Http\Controllers\Api\Groups\GetGroupController;
 use App\Http\Controllers\Api\Children\GetChildrenController;
+use App\Http\Controllers\Api\Children\GetChildController;
 use App\Http\Controllers\Api\Children\CreateChildController;
 use App\Http\Controllers\Api\Children\UpdateChildController;
 use App\Http\Controllers\Api\Children\DeleteChildController;
@@ -28,6 +29,7 @@ Route::get('/groups/{token}', GetGroupController::class);
 // Children Management API - Single Action Controllers
 Route::get('/groups/{token}/children', GetChildrenController::class);
 Route::post('/groups/{token}/children', CreateChildController::class);
+Route::get('/children/{id}', GetChildController::class);
 Route::put('/children/{id}', UpdateChildController::class);
 Route::delete('/children/{id}', DeleteChildController::class);
 

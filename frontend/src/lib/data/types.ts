@@ -16,7 +16,7 @@ export interface ApiErrorResponse {
 // === Entity Types ===
 
 export interface ClothingCategory {
-	id: string;
+	id: number;
 	name: string;
 	icon_path?: string;
 	sort_order?: number;
@@ -31,12 +31,10 @@ export interface Child {
 }
 
 export interface StockItem {
-	id?: string;
-	child_id: string;
-	clothing_category_id: string;
+	stock_item_id?: string | null;
+	clothing_category_id: number;
 	clothing_category: ClothingCategory;
 	current_count: number;
-	updated_at?: string;
 }
 
 export interface UserGroup {
@@ -63,12 +61,12 @@ export interface UpdateChildRequest {
 }
 
 export interface IncrementStockRequest {
-	clothing_category_id: string;
+	clothing_category_id: number;
 	increment: number;
 }
 
 export interface DecrementStockRequest {
-	clothing_category_id: string;
+	clothing_category_id: number;
 	decrement: number;
 }
 
@@ -77,6 +75,12 @@ export interface DecrementStockRequest {
 export interface GroupPageData {
 	group: UserGroup;
 	children: Child[];
+}
+
+export interface StockResponse {
+	child_id: string;
+	child_name: string;
+	stock_items: StockItem[];
 }
 
 export interface StockPageData {

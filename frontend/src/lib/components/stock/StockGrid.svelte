@@ -7,7 +7,7 @@
 	export let loading: boolean = false;
 	
 	// カテゴリIDと在庫データをマッピング
-	$: stockMap = new Map(stockItems.map(item => [item.categoryId, item]));
+	$: stockMap = new Map(stockItems.map(item => [item.clothing_category_id, item]));
 </script>
 
 <div class="responsive-grid">

@@ -5,18 +5,28 @@ import { stockApi } from '$lib';
 export const actions: Actions = {
 	incrementStock: async ({ params, request, fetch }) => {
 		const formData = await request.formData();
-		const categoryId = formData.get('categoryId') as string;
+		const categoryIdString = formData.get('categoryId') as string;
 		
 		// バリデーション
-		if (!categoryId) {
+		if (!categoryIdString) {
 			return fail(400, {
 				error: 'カテゴリIDが指定されていません'
 			});
 		}
 		
+		const categoryId = parseInt(categoryIdString, 10);
+		if (isNaN(categoryId)) {
+			return fail(400, {
+				error: 'カテゴリIDが無効です'
+			});
+		}
+		
 		try {
 			// 在庫増加APIを呼び出し
-			await stockApi.incrementStock(params.childId, { categoryId }, fetch);
+			await stockApi.incrementStock(params.childId, { 
+				clothing_category_id: categoryId,
+				increment: 1 
+			}, fetch);
 			
 			return {
 				success: true,
@@ -33,18 +43,28 @@ export const actions: Actions = {
 	
 	decrementStock: async ({ params, request, fetch }) => {
 		const formData = await request.formData();
-		const categoryId = formData.get('categoryId') as string;
+		const categoryIdString = formData.get('categoryId') as string;
 		
 		// バリデーション
-		if (!categoryId) {
+		if (!categoryIdString) {
 			return fail(400, {
 				error: 'カテゴリIDが指定されていません'
 			});
 		}
 		
+		const categoryId = parseInt(categoryIdString, 10);
+		if (isNaN(categoryId)) {
+			return fail(400, {
+				error: 'カテゴリIDが無効です'
+			});
+		}
+		
 		try {
 			// 在庫減少APIを呼び出し
-			await stockApi.decrementStock(params.childId, { categoryId }, fetch);
+			await stockApi.decrementStock(params.childId, { 
+				clothing_category_id: categoryId,
+				decrement: 1 
+			}, fetch);
 			
 			return {
 				success: true,

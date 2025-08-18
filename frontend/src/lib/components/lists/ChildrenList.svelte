@@ -68,7 +68,7 @@
 									type="text"
 									name="name"
 									bind:value={editingName}
-									placeholder="子どもの名前"
+									placeholder="お子さまの名前"
 									required
 									minlength="1"
 									maxlength="100"
@@ -161,7 +161,7 @@
 		</div>
 	{:else}
 		<div class="empty-state">
-			<p>まだ子どもが登録されていません</p>
+			<p>まだお子さまが登録されていません</p>
 		</div>
 	{/if}
 </div>
@@ -169,7 +169,7 @@
 <DeleteConfirmDialog
 	bind:show={showDeleteDialog}
 	title="{deleteTargetChild?.name}さんを削除"
-	message="この子どもを削除してもよろしいですか？"
+	message="このお子さまを削除してもよろしいですか？"
 	warningMessage="この操作は取り消せません。登録されている在庫データもすべて削除されます。"
 	confirmText="削除する"
 	onConfirm={handleDeleteConfirm}

@@ -12,11 +12,11 @@
 	$: action = isEditing ? '?/updateChild' : '?/addChild';
 	$: buttonText = isEditing ? '更新' : '追加';
 	$: loadingText = isEditing ? '更新中...' : '追加中...';
-	$: title = isEditing ? `${child?.name}さんの編集` : '新しい子どもを追加';
+	$: title = isEditing ? `${child?.name}さんの編集` : '新しいお子さまを追加';
 	
 	let nameValue = child?.name || '';
 	
-	// 子どもが変更されたら名前を更新
+	// お子さまが変更されたら名前を更新
 	$: if (child) {
 		nameValue = child.name;
 	}
@@ -31,7 +31,7 @@
 		{/if}
 		
 		<div class="form-group">
-			<label for="childName">子どもの名前</label>
+			<label for="childName">お子さまの名前</label>
 			<input
 				type="text"
 				id="childName"

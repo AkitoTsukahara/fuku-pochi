@@ -26,7 +26,7 @@
 		}, 2000);
 	}
 	
-	function getActionMessage(action: string, categoryId: string): string {
+	function getActionMessage(action: string, categoryId: number): string {
 		const category = data.categories.find(c => c.id === categoryId);
 		const categoryName = category?.name || 'アイテム';
 		
@@ -123,25 +123,6 @@
 		margin-bottom: 1rem;
 	}
 	
-	.back-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: #4a90e2;
-		text-decoration: none;
-		font-size: 0.95rem;
-		padding: 0.5rem 0;
-		transition: color 0.2s;
-	}
-	
-	.back-link:hover {
-		color: #357abd;
-	}
-	
-	.back-link svg {
-		width: 18px;
-		height: 18px;
-	}
 	
 	.stock-section {
 		background: white;

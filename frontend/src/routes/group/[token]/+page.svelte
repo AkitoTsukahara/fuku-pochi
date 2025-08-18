@@ -39,7 +39,7 @@
 			
 			<div class="next-action">
 				<Button on:click={toggleAddChildForm} variant="primary">
-					子どもを追加する
+					お子さまを追加する
 				</Button>
 			</div>
 		{:else}
@@ -54,9 +54,9 @@
 			
 			<div class="children-section">
 				<div class="section-header">
-					<h3>子ども一覧</h3>
+					<h3>お子さま一覧</h3>
 					<Button on:click={toggleAddChildForm} variant="primary" size="small">
-						子どもを追加
+						お子さまを追加
 					</Button>
 				</div>
 				
@@ -68,7 +68,7 @@
 		{#if showAddChildForm}
 			<div class="modal-overlay" on:click={toggleAddChildForm}>
 				<div class="modal-content" on:click|stopPropagation>
-					<h3>子どもを追加</h3>
+					<h3>お子さまを追加</h3>
 					<form 
 						method="POST" 
 						action="?/addChild" 
@@ -84,7 +84,7 @@
 						}}
 					>
 						<div class="form-group">
-							<label for="childName">子どもの名前</label>
+							<label for="childName">お子さまの名前</label>
 							<input
 								type="text"
 								id="childName"
