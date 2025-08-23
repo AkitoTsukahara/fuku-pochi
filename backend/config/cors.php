@@ -19,16 +19,20 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
+    'allowed_origins' => array_filter([
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'http://localhost:5174',
         'http://127.0.0.1:5174',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
-    ],
+        env('FRONTEND_URL'), // Vercelデプロイ時のURL
+        env('VERCEL_URL') ? 'https://' . env('VERCEL_URL') : null, // Vercel Preview URL
+    ]),
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https://.*\.vercel\.app$#', // Vercelのプレビューデプロイメント用
+    ],
 
     'allowed_headers' => ['*'],
 
