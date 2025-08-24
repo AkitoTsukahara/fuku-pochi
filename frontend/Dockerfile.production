@@ -24,7 +24,7 @@ RUN apk add --no-cache \
 COPY package*.json ./
 
 # 依存関係をインストール（ビルドに必要）
-RUN npm ci --frozen-lockfile
+RUN npm install
 
 # ソースコードをコピー
 COPY . .
@@ -118,7 +118,7 @@ RUN apk add --no-cache \
 
 # 依存関係をインストール
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # ソースコードをコピー
 COPY . .
