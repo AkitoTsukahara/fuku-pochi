@@ -71,7 +71,14 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
-        }
+        },
+        "cache-ttl": 15552000,
+        "cache-files-ttl": 15552000,
+        "discard-changes": true,
+        "process-timeout": 600,
+        "classmap-authoritative": false,
+        "apcu-autoloader": true,
+        "optimize-autoloader": true
     },
     "minimum-stability": "stable",
     "prefer-stable": true

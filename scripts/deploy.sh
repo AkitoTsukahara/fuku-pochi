@@ -7,6 +7,10 @@
 
 set -euo pipefail
 
+# Docker BuildKit有効化（ビルドキャッシュ利用）
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
 # 色付きログ用の関数
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -181,12 +185,12 @@ log_info "Dockerイメージビルド中..."
 # 不要なイメージのみクリーンアップ（キャッシュは保持）
 docker image prune -f --filter "dangling=true"
 
-# Lightsail $5プラン対応：順次ビルド（メモリ制約考慮）
-log_info "バックエンドビルド中..."
-docker compose -f "${COMPOSE_FILE}" build backend
+# Lightsail $5プラン対応：順次ビルド（メモリ制約考慮）+ 積極的キャッシュ利用
+log_info "バックエンドビルド中（キャッシュ利用）..."
+docker compose -f "${COMPOSE_FILE}" build --build-arg BUILDKIT_INLINE_CACHE=1 backend
 
-log_info "フロントエンドビルド中..."
-docker compose -f "${COMPOSE_FILE}" build frontend
+log_info "フロントエンドビルド中（キャッシュ利用）..."
+docker compose -f "${COMPOSE_FILE}" build --build-arg BUILDKIT_INLINE_CACHE=1 frontend
 
 log_info "その他サービスビルド中..."
 docker compose -f "${COMPOSE_FILE}" build nginx scheduler queue_worker

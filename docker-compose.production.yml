@@ -33,6 +33,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.production
+      cache_from:
+        - webapp_backend_prod:latest
+      args:
+        - BUILDKIT_INLINE_CACHE=1
     container_name: webapp_backend_prod
     # ポートを内部のみに制限（Nginx経由でアクセス）
     expose:
@@ -75,6 +79,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.production
+      cache_from:
+        - webapp_frontend_prod:latest
+      args:
+        - BUILDKIT_INLINE_CACHE=1
     container_name: webapp_frontend_prod
     # ポートを内部のみに制限（Nginx経由でアクセス）
     expose:

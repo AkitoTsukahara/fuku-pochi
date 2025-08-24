@@ -1,6 +1,6 @@
 # ==============================================================================
-# Laravel 本番用 Dockerfile
-# Multi-stage build で最適化
+# Laravel 本番用 Dockerfile - Layer Cache 最適化版
+# Multi-stage build で最適化 + aggressive caching
 # ==============================================================================
 
 # Build Stage: 依存関係インストール
@@ -9,7 +9,9 @@ FROM php:8.4-fpm-alpine AS builder
 # 作業ディレクトリを設定
 WORKDIR /var/www/html
 
-# ビルド用パッケージをインストール
+# ==============================================================================
+# レイヤー1: システムパッケージ（変更頻度：低）
+# ==============================================================================
 RUN apk add --no-cache \
     curl \
     libpng-dev \
@@ -28,7 +30,9 @@ RUN apk add --no-cache \
     g++ \
     make
 
-# PHP拡張をインストール
+# ==============================================================================
+# レイヤー2: PHP拡張（変更頻度：極低）- 最も時間のかかるレイヤー
+# ==============================================================================
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
@@ -39,16 +43,19 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
         gd \
         zip \
         intl \
-        opcache
+        opcache \
+    && docker-php-ext-enable opcache
 
-# OPcacheを有効化（本番用）
-RUN docker-php-ext-enable opcache
-
-# Composerをインストール
+# ==============================================================================
+# レイヤー3: Composer（変更頻度：低）
+# ==============================================================================
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# プロジェクトファイルをコピー
-COPY --chown=www-data:www-data . /var/www/html
+# ==============================================================================
+# レイヤー4: Composer依存関係（中程度の変更頻度）
+# composer.json/lock ファイルのみ先にコピー → 依存関係が変わった時のみ再ビルド
+# ==============================================================================
+COPY --chown=www-data:www-data composer.json composer.lock ./
 
 # Composer依存関係をインストール（本番用）
 RUN composer install \
@@ -56,12 +63,27 @@ RUN composer install \
     --optimize-autoloader \
     --no-interaction \
     --prefer-dist \
-    --no-scripts
+    --no-scripts \
+    --no-autoloader
 
-# Laravel最適化コマンド実行
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+# ==============================================================================
+# レイヤー5: アプリケーションコード（高頻度変更）
+# ==============================================================================
+COPY --chown=www-data:www-data . /var/www/html
+
+# ==============================================================================
+# レイヤー6: Composer最終処理 + Laravel最適化
+# ==============================================================================
+RUN composer dump-autoload --optimize --no-dev
+
+# Laravel最適化コマンド実行（堅牢なエラーハンドリング）
+RUN set -e; \
+    cp .env.example .env 2>/dev/null || echo "APP_KEY=" > .env; \
+    php artisan key:generate --no-interaction 2>/dev/null || echo "Key generation skipped"; \
+    php artisan config:cache 2>/dev/null || echo "Config cache failed - will be done at runtime"; \
+    php artisan route:cache 2>/dev/null || echo "Route cache failed - will be done at runtime"; \
+    php artisan view:cache 2>/dev/null || echo "View cache failed - will be done at runtime"; \
+    rm -f .env
 
 # ==============================================================================
 # Production Stage: 実行環境

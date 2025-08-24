@@ -130,6 +130,10 @@ jobs:
             
             echo "🔄 Starting deployment..."
             
+            # Enable Docker BuildKit for cache support
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
+            
             # Navigate to project directory (auto-detect based on repository name)
             REPO_NAME=$(basename ${{ github.repository }})
             cd /var/www/${REPO_NAME}
