@@ -34,24 +34,29 @@ log_error() {
 # 設定変数
 # ==============================================================================
 
-# 環境変数からプロジェクト名を取得（セキュリティ対応）
-PROJECT_NAME="${REPOSITORY_NAME:-webapp}"
-DEPLOY_DIR="/var/www/${PROJECT_NAME}"
+log_info "デプロイ前チェック中..."
+
+# 現在のディレクトリから自動判定（実行場所がプロジェクトディレクトリ）
+DEPLOY_DIR="$(pwd)"
+PROJECT_NAME="$(basename "${DEPLOY_DIR}")"
+
+# パラメータ設定
 COMPOSE_FILE="docker-compose.production.yml"
 BACKUP_DIR="/var/backups/${PROJECT_NAME}"
 BRANCH="${1:-main}"
 SKIP_BACKUP="${2:-false}"
 
+log_info "プロジェクトディレクトリ: ${DEPLOY_DIR}"
+log_info "プロジェクト名: ${PROJECT_NAME}"
+
 # ==============================================================================
 # 前提条件チェック
 # ==============================================================================
 
-log_info "デプロイ前チェック中..."
-
-# ディレクトリ存在チェック
-if [ ! -d "${DEPLOY_DIR}" ]; then
-    log_error "プロジェクトディレクトリが存在しません: ${DEPLOY_DIR}"
-    log_info "先に setup-vps.sh を実行してください"
+# 必要なファイルチェック
+if [ ! -f "${DEPLOY_DIR}/${COMPOSE_FILE}" ]; then
+    log_error "${COMPOSE_FILE} ファイルが存在しません"
+    log_error "プロジェクトのルートディレクトリで実行してください"
     exit 1
 fi
 

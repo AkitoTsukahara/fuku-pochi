@@ -130,8 +130,9 @@ jobs:
             
             echo "🔄 Starting deployment..."
             
-            # Navigate to project directory
-            cd /var/www/${{ secrets.REPOSITORY_NAME }}
+            # Navigate to project directory (auto-detect based on repository name)
+            REPO_NAME=$(basename ${{ github.repository }})
+            cd /var/www/${REPO_NAME}
             
             # Pull latest changes
             echo "📥 Pulling latest changes..."

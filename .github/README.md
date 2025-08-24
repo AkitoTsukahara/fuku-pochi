@@ -30,7 +30,7 @@
 
 自動デプロイを使用するためには、以下のSecrets設定が**必須**です：
 
-### 1. 必須Secrets
+### 1. 必須Secrets（2つのみ）
 
 GitHubリポジトリの **Settings** → **Secrets and variables** → **Actions** で設定：
 
@@ -50,12 +50,10 @@ cat ~/.ssh/id_rsa
 
 **設定値例**: `54.178.217.122`
 
-#### `REPOSITORY_NAME`
-**説明**: VPS上のプロジェクトディレクトリ名
+#### ~~`REPOSITORY_NAME`~~ (不要)
+**説明**: ~~VPS上のプロジェクトディレクトリ名~~
 
-**設定値**: 
-- セキュリティ強化前: `fuku-pochi`
-- セキュリティ強化後: VPSの`/var/www/`以下のディレクトリ名
+**✅ 自動化**: GitHubリポジトリ名から自動判定
 
 ### 2. オプションSecrets
 
