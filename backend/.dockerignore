@@ -1,0 +1,81 @@
+# ==============================================================================
+# Backend Docker Build Context Optimization  
+# 不要なファイルを除外してビルド時間短縮
+# ==============================================================================
+
+# Laravel vendor and cache
+vendor/
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+
+# Environment files
+.env*
+!.env.example
+
+# Laravel storage
+storage/logs/*
+!storage/logs/.gitkeep
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+storage/app/public/*
+
+# Development tools
+.vscode/
+.idea/
+.phpstorm.meta.php
+
+# Testing (本番ビルドでは不要)
+tests/
+.phpunit.result.cache
+coverage/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+CHANGELOG.md
+docs/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Composer
+composer.phar
+
+# Laravel specific
+.php_cs.cache
+.phpunit.result.cache
+_ide_helper.php
+_ide_helper_models.php
+
+# Backup files
+*.sql
+*.backup
+
+# Development database
+database/database.sqlite*
+
+# Auth files
+auth.json

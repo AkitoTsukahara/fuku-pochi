@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # Build Stage: アプリケーションビルド
-FROM node:22-alpine AS builder
+FROM node:20-alpine AS builder
 
 # メタデータ
 LABEL stage="builder"
@@ -34,7 +34,7 @@ RUN npm run build
 
 # ==============================================================================
 # Production Stage: 実行環境
-FROM node:22-alpine AS production
+FROM node:20-alpine AS production
 
 # メタデータ
 LABEL maintainer="FukuPochi Team"
@@ -53,18 +53,16 @@ RUN addgroup -g 1001 -S nodejs && \
 # 作業ディレクトリを設定
 WORKDIR /app
 
-# 本番用依存関係のみをコピー
+# 本番用依存関係のみをインストール
 COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+RUN npm ci --omit=dev --cache /tmp/empty-cache
 
 # ビルド成果物をコピー
 COPY --from=builder --chown=nextjs:nodejs /app/build ./build
 COPY --from=builder --chown=nextjs:nodejs /app/static ./static
 
-# SvelteKit設定ファイル
-COPY --from=builder --chown=nextjs:nodejs /app/svelte.config.js ./
-COPY --from=builder --chown=nextjs:nodejs /app/vite.config.ts ./
-COPY --from=builder --chown=nextjs:nodejs /app/app.html ./
+# 必要な設定ファイルのみ
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
 
 # 環境変数設定（本番用）
 ENV NODE_ENV=production
@@ -106,7 +104,7 @@ CMD ["nginx", "-g", "daemon off;"]
 
 # ==============================================================================
 # Development Stage: 開発用（デバッグ向け）
-FROM node:22-alpine AS development
+FROM node:20-alpine AS development
 
 WORKDIR /app
 

@@ -173,11 +173,18 @@ fi
 
 log_info "Dockerイメージビルド中..."
 
-# 古いイメージをクリーンアップ
-docker system prune -f
+# 不要なイメージのみクリーンアップ（キャッシュは保持）
+docker image prune -f --filter "dangling=true"
 
-# イメージビルド
-docker compose -f "${COMPOSE_FILE}" build --no-cache --parallel
+# Lightsail $5プラン対応：順次ビルド（メモリ制約考慮）
+log_info "バックエンドビルド中..."
+docker compose -f "${COMPOSE_FILE}" build backend
+
+log_info "フロントエンドビルド中..."
+docker compose -f "${COMPOSE_FILE}" build frontend
+
+log_info "その他サービスビルド中..."
+docker compose -f "${COMPOSE_FILE}" build nginx scheduler queue_worker
 
 log_success "Dockerイメージビルド完了"
 

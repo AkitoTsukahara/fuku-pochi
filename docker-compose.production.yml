@@ -19,6 +19,8 @@ services:
     networks:
       - webapp_network
     restart: unless-stopped
+    # Lightsail $5プラン対応：メモリ制限
+    mem_limit: 64M
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
@@ -59,6 +61,8 @@ services:
     networks:
       - webapp_network
     restart: unless-stopped
+    # Lightsail $5プラン対応：メモリ制限
+    mem_limit: 256M
     healthcheck:
       test: ["CMD", "php", "artisan", "tinker", "--execute=echo 'ok';"]
       interval: 30s
@@ -85,6 +89,8 @@ services:
     networks:
       - webapp_network
     restart: unless-stopped
+    # Lightsail $5プラン対応：メモリ制限
+    mem_limit: 128M
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
@@ -132,6 +138,8 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    # Lightsail $5プラン対応：メモリ制限
+    mem_limit: 384M
 
   # Redis（本番用）
   redis:
@@ -181,6 +189,8 @@ services:
       - webapp_network
     restart: unless-stopped
     command: ["php", "artisan", "schedule:work"]
+    # Lightsail $5プラン対応：メモリ制限
+    mem_limit: 64M
 
   queue_worker:
     build:
@@ -204,6 +214,8 @@ services:
       - webapp_network
     restart: unless-stopped
     command: ["php", "artisan", "queue:work", "--verbose", "--tries=3", "--timeout=90"]
+    # Lightsail $5プラン対応：メモリ制限
+    mem_limit: 128M
 
 # 本番用ボリューム定義
 volumes:

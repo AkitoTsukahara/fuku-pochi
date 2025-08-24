@@ -1,0 +1,62 @@
+# ==============================================================================
+# Frontend Docker Build Context Optimization
+# 不要なファイルを除外してビルド時間短縮
+# ==============================================================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SvelteKit
+.svelte-kit/
+build/
+.output/
+dist/
+
+# Environment files
+.env*
+!.env.example
+
+# Development tools
+.vscode/
+.idea/
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Documentation (unless needed for build)
+README.md
+CHANGELOG.md
+docs/
+
+# Package manager locks (copy separately for layer caching)
+# package-lock.json は別途COPYで最適化
+
+# Static assets (if not needed in build)
+static/favicon.ico
