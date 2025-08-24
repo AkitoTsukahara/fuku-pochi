@@ -1,4 +1,4 @@
-# Lightsail デプロイコマンド集（IP: 54.178.217.122）
+# Lightsail デプロイコマンド集
 
 ## 1. 初期セットアップ（rootユーザーで実行）
 
@@ -39,8 +39,8 @@ su - deploy
 
 # プロジェクトクローン
 cd /var/www
-git clone https://github.com/AkitoTsukahara/fuku-pochi.git
-cd fuku-pochi
+git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+cd YOUR_REPOSITORY
 
 # 環境変数ファイル作成
 cat > .env.production << 'EOF'
@@ -49,7 +49,7 @@ APP_NAME=FukuPochi
 APP_ENV=production
 APP_KEY=base64:GENERATE_NEW_KEY_HERE
 APP_DEBUG=false
-APP_URL=http://54.178.217.122
+APP_URL=http://${SERVER_IP}
 
 # 言語・地域設定
 APP_LOCALE=ja
@@ -64,17 +64,17 @@ LOG_LEVEL=error
 DB_CONNECTION=mysql
 DB_HOST=database
 DB_PORT=3306
-DB_DATABASE=fukupochi
-DB_USERNAME=fukupochi_user
-DB_PASSWORD=StrongPassword123!
-DB_ROOT_PASSWORD=RootPassword456!
+DB_DATABASE=app_prod_db
+DB_USERNAME=db_user_prod
+DB_PASSWORD=CHANGE_TO_STRONG_PASSWORD
+DB_ROOT_PASSWORD=CHANGE_TO_ROOT_PASSWORD
 
 # セッション設定
 SESSION_DRIVER=database
 SESSION_LIFETIME=120
 SESSION_ENCRYPT=false
 SESSION_PATH=/
-SESSION_DOMAIN=54.178.217.122
+SESSION_DOMAIN=${SERVER_IP}
 SESSION_SECURE_COOKIE=false
 SESSION_SAME_SITE=lax
 
@@ -88,21 +88,21 @@ CACHE_DRIVER=redis
 # Redis設定
 REDIS_CLIENT=phpredis
 REDIS_HOST=redis
-REDIS_PASSWORD=RedisPassword789!
+REDIS_PASSWORD=CHANGE_TO_REDIS_PASSWORD
 REDIS_PORT=6379
 REDIS_DB=0
 
 # メール設定（テスト用）
 MAIL_MAILER=log
-MAIL_FROM_ADDRESS="noreply@54.178.217.122"
+MAIL_FROM_ADDRESS="noreply@${SERVER_IP}"
 MAIL_FROM_NAME="${APP_NAME}"
 
 # CORS・API設定
-FRONTEND_URL=http://54.178.217.122
-SANCTUM_STATEFUL_DOMAINS=54.178.217.122
+FRONTEND_URL=http://${SERVER_IP}
+SANCTUM_STATEFUL_DOMAINS=${SERVER_IP}
 
 # ドメイン設定
-DOMAIN=54.178.217.122
+DOMAIN=${SERVER_IP}
 
 # タイムゾーン
 TZ=Asia/Tokyo
@@ -113,7 +113,7 @@ EOF
 
 ```bash
 # APP_KEY生成（コンテナを一時的に起動して生成）
-docker run --rm -v /var/www/fuku-pochi/backend:/app -w /app php:8.4-cli sh -c "composer install --no-dev && php artisan key:generate --show"
+docker run --rm -v /var/www/YOUR_REPOSITORY/backend:/app -w /app php:8.4-cli sh -c "composer install --no-dev && php artisan key:generate --show"
 
 # 生成されたキーを.env.productionに設定
 # 例: base64:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -124,7 +124,7 @@ nano .env.production
 ## 4. デプロイ実行
 
 ```bash
-cd /var/www/fuku-pochi
+cd /var/www/YOUR_REPOSITORY
 
 # Dockerイメージビルド
 docker compose -f docker-compose.production.yml build
@@ -154,10 +154,10 @@ docker compose -f docker-compose.production.yml exec backend php artisan view:ca
 
 ```bash
 # ヘルスチェック
-curl http://54.178.217.122/health
+curl http://${SERVER_IP}/health
 
 # APIヘルスチェック
-curl http://54.178.217.122/api/health
+curl http://${SERVER_IP}/api/health
 
 # ログ確認
 docker compose -f docker-compose.production.yml logs -f
@@ -199,7 +199,7 @@ sudo ufw reload
 ## 7. アプリケーション更新
 
 ```bash
-cd /var/www/fuku-pochi
+cd /var/www/YOUR_REPOSITORY
 
 # 最新コード取得
 git pull origin main
@@ -222,5 +222,5 @@ docker compose -f docker-compose.production.yml exec backend php artisan migrate
 # 自動バックアップ設定（毎日午前3時）
 crontab -e
 # 以下を追加
-0 3 * * * /var/www/fuku-pochi/scripts/backup.sh >> /var/log/backup.log 2>&1
+0 3 * * * /var/www/YOUR_REPOSITORY/scripts/backup.sh >> /var/log/backup.log 2>&1
 ```

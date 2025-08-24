@@ -35,7 +35,7 @@ Docker Composeを使用したAWS Lightsailへの本番環境デプロイ手順
 3. リージョン選択（東京: ap-northeast-1）
 4. OS選択: Ubuntu 22.04 LTS
 5. プラン選択: $5/月
-6. インスタンス名: fukupochi-prod
+6. インスタンス名: webapp-prod
 7. "Create instance"で作成
 ```
 
@@ -138,7 +138,7 @@ APP_NAME=FukuPochi
 APP_ENV=production
 APP_KEY=base64:WILL_GENERATE_IN_NEXT_STEP
 APP_DEBUG=false
-APP_URL=http://54.178.217.122
+APP_URL=http://${SERVER_IP}
 
 APP_LOCALE=ja
 APP_FALLBACK_LOCALE=en
@@ -150,10 +150,10 @@ LOG_LEVEL=error
 DB_CONNECTION=mysql
 DB_HOST=database
 DB_PORT=3306
-DB_DATABASE=fukupochi
-DB_USERNAME=fukupochi_user
-DB_PASSWORD=StrongPassword123!
-DB_ROOT_PASSWORD=RootPassword456!
+DB_DATABASE=app_prod_db
+DB_USERNAME=db_user_prod
+DB_PASSWORD=CHANGE_TO_STRONG_PASSWORD
+DB_ROOT_PASSWORD=CHANGE_TO_ROOT_PASSWORD
 
 SESSION_DRIVER=database
 SESSION_LIFETIME=120
@@ -163,11 +163,11 @@ QUEUE_CONNECTION=database
 
 REDIS_HOST=redis
 REDIS_PORT=6379
-REDIS_PASSWORD=RedisPassword789!
+REDIS_PASSWORD=CHANGE_TO_REDIS_PASSWORD
 
-FRONTEND_URL=http://54.178.217.122
-SANCTUM_STATEFUL_DOMAINS=54.178.217.122
-DOMAIN=54.178.217.122
+FRONTEND_URL=http://${SERVER_IP}
+SANCTUM_STATEFUL_DOMAINS=${SERVER_IP}
+DOMAIN=${SERVER_IP}
 
 TZ=Asia/Tokyo
 EOF
@@ -212,10 +212,10 @@ docker compose -f docker-compose.production.yml exec backend php artisan view:ca
 #### 1. アクセス確認
 ```bash
 # ローカルでヘルスチェック
-curl http://54.178.217.122/health
+curl http://${SERVER_IP}/health
 
 # APIヘルスチェック
-curl http://54.178.217.122/api/health
+curl http://${SERVER_IP}/api/health
 
 # ログ監視（Ctrl+C で停止）
 docker compose -f docker-compose.production.yml logs -f
@@ -225,9 +225,9 @@ docker compose -f docker-compose.production.yml logs -f
 
 以下のURLで確認できます：
 
-- **メインサイト**: http://54.178.217.122
-- **ヘルスチェック**: http://54.178.217.122/health  
-- **API**: http://54.178.217.122/api
+- **メインサイト**: http://${SERVER_IP}
+- **ヘルスチェック**: http://${SERVER_IP}/health  
+- **API**: http://${SERVER_IP}/api
 
 ### Phase 5: 運用設定（オプション）
 
@@ -319,7 +319,82 @@ sudo systemctl restart docker
 1. Lightsailファイアウォール設定
 2. コンテナ状態: `docker compose -f docker-compose.production.yml ps`
 3. ローカルアクセス: `curl http://localhost/health`
-4. 外部アクセス: `curl http://54.178.217.122/health`
+4. 外部アクセス: `curl http://${SERVER_IP}/health`
+
+## セキュリティ変更後の再デプロイ手順
+
+### ⚠️ 重要: 新しい環境変数が追加されました
+
+セキュリティ強化により、以下の新しい環境変数を設定する必要があります：
+
+#### 1. SERVER_IPの設定
+```bash
+# .env.productionファイルで設定
+SERVER_IP=YOUR_ACTUAL_SERVER_IP_ADDRESS
+```
+
+#### 2. データベース認証情報の変更
+```bash
+# 新しい認証情報を設定
+DB_DATABASE=app_prod_db
+DB_USERNAME=db_user_prod
+DB_PASSWORD=SECURE_RANDOM_PASSWORD_32_CHARS
+DB_ROOT_PASSWORD=SECURE_ROOT_PASSWORD_32_CHARS
+REDIS_PASSWORD=SECURE_REDIS_PASSWORD_32_CHARS
+```
+
+#### 3. 既存VPSでの更新手順
+
+```bash
+# 1. 最新コードを取得
+cd /var/www/YOUR_REPOSITORY
+git pull origin main
+
+# 2. 環境変数ファイルを更新
+nano .env.production
+# SERVER_IP=YOUR_ACTUAL_IP_ADDRESS を追加
+# 認証情報を新しい形式に更新
+
+# 3. サービス停止
+docker compose -f docker-compose.production.yml down
+
+# 4. 古いボリュームとネットワークの削除（注意: データが削除されます）
+docker volume rm YOUR_REPOSITORY_mysql_data_prod
+docker network rm YOUR_REPOSITORY_webapp_network
+
+# 5. 再ビルドとデプロイ
+docker compose -f docker-compose.production.yml build --no-cache
+docker compose -f docker-compose.production.yml up -d
+
+# 6. データベースの再作成
+docker compose -f docker-compose.production.yml exec backend php artisan migrate --force
+
+# 7. 動作確認
+curl http://${SERVER_IP}/health
+```
+
+#### 4. セキュリティチェックリスト
+
+- [ ] SERVER_IP環境変数が正しく設定されている
+- [ ] 認証情報が新しいランダムな値に変更されている  
+- [ ] コンテナ名が汎用名に変更されている
+- [ ] アプリケーションが正常に動作している
+- [ ] 外部からのアクセスが可能である
+
+### 変更点まとめ
+
+#### セキュリティ強化内容
+1. **IPアドレス非表示**: ハードコードされたIPを環境変数化
+2. **認証情報強化**: 推測困難なランダム値に変更
+3. **識別子匿名化**: プロジェクト固有名を汎用名に変更
+4. **設定テンプレート化**: 機密情報をプレースホルダーに変更
+
+#### 影響のあるファイル
+- `.env.production.example`
+- `docker-compose.production.yml` 
+- `docker-compose.yml`
+- `deploy-commands.md`
+- 各種設定ファイル
 
 ## コスト最適化
 

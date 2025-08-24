@@ -4,7 +4,7 @@ services:
   # Nginx リバースプロキシ
   nginx:
     image: nginx:alpine
-    container_name: fukupochi_nginx_prod
+    container_name: webapp_nginx_prod
     ports:
       - "80:80"
       # - "443:443"  # HTTPSは後で有効化
@@ -17,7 +17,7 @@ services:
       - backend
       - frontend
     networks:
-      - fukupochi_network
+      - webapp_network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
@@ -31,7 +31,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.production
-    container_name: fukupochi_backend_prod
+    container_name: webapp_backend_prod
     # ポートを内部のみに制限（Nginx経由でアクセス）
     expose:
       - "9000"
@@ -57,7 +57,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - fukupochi_network
+      - webapp_network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "php", "artisan", "tinker", "--execute=echo 'ok';"]
@@ -71,19 +71,19 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.production
-    container_name: fukupochi_frontend_prod
+    container_name: webapp_frontend_prod
     # ポートを内部のみに制限（Nginx経由でアクセス）
     expose:
       - "3000"
     environment:
       - NODE_ENV=production
-      - PUBLIC_API_BASE_URL=http://54.178.217.122/api
+      - PUBLIC_API_BASE_URL=http://${SERVER_IP}/api
       - PUBLIC_APP_ENV=production
       - PUBLIC_APP_NAME=FukuPochi
     depends_on:
       - backend
     networks:
-      - fukupochi_network
+      - webapp_network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
@@ -95,7 +95,7 @@ services:
   # MySQL データベース（本番用）
   database:
     image: mysql:8.4
-    container_name: fukupochi_database_prod
+    container_name: webapp_database_prod
     # ポート公開を削除（セキュリティ向上）
     expose:
       - "3306"
@@ -124,7 +124,7 @@ services:
       --slow-query-log-file=/var/log/mysql/slow.log
       --long-query-time=2
     networks:
-      - fukupochi_network
+      - webapp_network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
@@ -136,7 +136,7 @@ services:
   # Redis（本番用）
   redis:
     image: redis:7-alpine
-    container_name: fukupochi_redis_prod
+    container_name: webapp_redis_prod
     # ポート公開を削除（セキュリティ向上）
     expose:
       - "6379"
@@ -147,7 +147,7 @@ services:
     # 本番用Redis設定
     command: redis-server /etc/redis/redis.conf
     networks:
-      - fukupochi_network
+      - webapp_network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -163,7 +163,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.production
-    container_name: fukupochi_scheduler_prod
+    container_name: webapp_scheduler_prod
     volumes:
       - app_storage:/var/www/html/storage
     env_file:
@@ -178,7 +178,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - fukupochi_network
+      - webapp_network
     restart: unless-stopped
     command: ["php", "artisan", "schedule:work"]
 
@@ -186,7 +186,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.production
-    container_name: fukupochi_queue_prod
+    container_name: webapp_queue_prod
     volumes:
       - app_storage:/var/www/html/storage
     env_file:
@@ -201,7 +201,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - fukupochi_network
+      - webapp_network
     restart: unless-stopped
     command: ["php", "artisan", "queue:work", "--verbose", "--tries=3", "--timeout=90"]
 
@@ -231,7 +231,7 @@ volumes:
 
 # 本番用ネットワーク
 networks:
-  fukupochi_network:
+  webapp_network:
     driver: bridge
     # 内部ネットワーク分離
     internal: false
