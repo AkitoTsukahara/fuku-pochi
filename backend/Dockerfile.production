@@ -22,6 +22,7 @@ RUN apk add --no-cache \
     icu-dev \
     oniguruma-dev \
     libwebp-dev \
+    zlib-dev \
     # ビルドツール（実行時には不要）
     autoconf \
     g++ \
@@ -85,29 +86,20 @@ RUN apk add --no-cache \
     icu \
     oniguruma \
     libwebp \
+    zlib \
     # 監視・デバッグ用ツール
     htop \
     mysql-client \
     # プロセス管理
     supervisor
 
-# PHP拡張をインストール（production用）
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install -j$(nproc) \
-        pdo_mysql \
-        mbstring \
-        exif \
-        pcntl \
-        bcmath \
-        gd \
-        zip \
-        intl \
-        opcache
+# PHP拡張をbuilderステージからコピー
+COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
 # PHP-FPM設定ファイルをコピー
 COPY docker/php/php.production.ini /usr/local/etc/php/php.ini
 COPY docker/php/www.production.conf /usr/local/etc/php-fpm.d/www.conf
-COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
 # Supervisor設定（バックグラウンドタスク用）
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
