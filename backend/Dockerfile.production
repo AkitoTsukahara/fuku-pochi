@@ -72,8 +72,14 @@ RUN composer install \
 COPY --chown=www-data:www-data . /var/www/html
 
 # ==============================================================================
-# レイヤー6: Composer最終処理 + Laravel最適化
+# レイヤー6: 必要ディレクトリ作成 + Composer最終処理
 # ==============================================================================
+# Laravel必須ディレクトリを事前作成
+RUN mkdir -p bootstrap/cache storage/{logs,framework/{cache,sessions,views},app/public} \
+    && chown -R www-data:www-data bootstrap/cache storage \
+    && chmod -R 775 bootstrap/cache storage
+
+# Composer dump-autoload実行
 RUN composer dump-autoload --optimize --no-dev
 
 # Laravel最適化コマンド実行（堅牢なエラーハンドリング）
