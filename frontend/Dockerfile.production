@@ -1,0 +1,133 @@
+# ==============================================================================
+# SvelteKit 本番用 Dockerfile
+# Multi-stage build で最適化
+# ==============================================================================
+
+# Build Stage: アプリケーションビルド
+FROM node:22-alpine AS builder
+
+# メタデータ
+LABEL stage="builder"
+
+# 作業ディレクトリを設定
+WORKDIR /app
+
+# 必要なシステムパッケージをインストール（ビルド時のみ）
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git \
+    curl
+
+# package.json と package-lock.json をコピー（依存関係キャッシュ最適化）
+COPY package*.json ./
+
+# 本番用依存関係をインストール
+RUN npm ci --only=production --frozen-lockfile
+
+# 開発依存関係も一時的にインストール（ビルドに必要）
+RUN npm ci --frozen-lockfile
+
+# ソースコードをコピー
+COPY . .
+
+# 本番用ビルド実行
+RUN npm run build
+
+# ==============================================================================
+# Production Stage: 実行環境
+FROM node:22-alpine AS production
+
+# メタデータ
+LABEL maintainer="FukuPochi Team"
+LABEL version="1.0.0"
+LABEL description="FukuPochi SvelteKit Frontend (Production)"
+
+# 本番用パッケージのみインストール
+RUN apk add --no-cache \
+    curl \
+    dumb-init
+
+# セキュリティ：非rootユーザーを作成
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# 作業ディレクトリを設定
+WORKDIR /app
+
+# 本番用依存関係のみをコピー
+COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# ビルド成果物をコピー
+COPY --from=builder --chown=nextjs:nodejs /app/build ./build
+COPY --from=builder --chown=nextjs:nodejs /app/static ./static
+
+# SvelteKit設定ファイル
+COPY --from=builder --chown=nextjs:nodejs /app/svelte.config.js ./
+COPY --from=builder --chown=nextjs:nodejs /app/vite.config.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/app.html ./
+
+# 環境変数設定（本番用）
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# nextjsユーザーに切り替え
+USER nextjs
+
+# ポート3000を公開
+EXPOSE 3000
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl --fail http://localhost:3000/ || exit 1
+
+# 起動コマンド：dumb-initでプロセス管理
+CMD ["dumb-init", "node", "build"]
+
+# ==============================================================================
+# Static Build Variant: 静的ファイル配信用
+FROM nginx:alpine AS static
+
+# メタデータ
+LABEL variant="static"
+LABEL description="FukuPochi SvelteKit Frontend (Static)"
+
+# ビルドステージから静的ファイルをコピー
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# カスタムNginx設定
+COPY docker/nginx/nginx.static.conf /etc/nginx/nginx.conf
+
+# ポート80を公開
+EXPOSE 80
+
+# Nginx起動
+CMD ["nginx", "-g", "daemon off;"]
+
+# ==============================================================================
+# Development Stage: 開発用（デバッグ向け）
+FROM node:22-alpine AS development
+
+WORKDIR /app
+
+# 開発用パッケージをインストール
+RUN apk add --no-cache \
+    git \
+    curl \
+    vim
+
+# 依存関係をインストール
+COPY package*.json ./
+RUN npm ci
+
+# ソースコードをコピー
+COPY . .
+
+# ポート5173を公開（開発サーバー）
+EXPOSE 5173
+
+# 開発サーバー起動
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -1,0 +1,240 @@
+version: '3.8'
+
+services:
+  # Nginx リバースプロキシ
+  nginx:
+    image: nginx:alpine
+    container_name: fukupochi_nginx_prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./storage/app/public:/var/www/html/storage/app/public:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - fukupochi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Laravel API サーバー（本番用）
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    container_name: fukupochi_backend_prod
+    # ポートを内部のみに制限（Nginx経由でアクセス）
+    expose:
+      - "9000"
+    volumes:
+      # 本番用：バインドマウント削除、必要な永続化のみ
+      - app_storage:/var/www/html/storage
+      - app_bootstrap_cache:/var/www/html/bootstrap/cache
+    env_file:
+      - .env.production
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-fukupochi}
+      - DB_USERNAME=${DB_USERNAME:-fukupochi_user}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fukupochi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "php", "artisan", "tinker", "--execute=echo 'ok';"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # SvelteKit フロントエンド（本番用）
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.production
+    container_name: fukupochi_frontend_prod
+    # ポートを内部のみに制限（Nginx経由でアクセス）
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - PUBLIC_API_BASE_URL=https://${DOMAIN}/api
+      - PUBLIC_APP_ENV=production
+      - PUBLIC_APP_NAME=FukuPochi
+    depends_on:
+      - backend
+    networks:
+      - fukupochi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # MySQL データベース（本番用）
+  database:
+    image: mysql:8.4
+    container_name: fukupochi_database_prod
+    # ポート公開を削除（セキュリティ向上）
+    expose:
+      - "3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE:-fukupochi}
+      MYSQL_USER: ${DB_USERNAME:-fukupochi_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      # 本番用MySQL設定
+      MYSQL_INNODB_BUFFER_POOL_SIZE: 256M
+      MYSQL_INNODB_LOG_FILE_SIZE: 64M
+      MYSQL_MAX_CONNECTIONS: 100
+    volumes:
+      - mysql_data_prod:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - mysql_logs:/var/log/mysql
+      # 初期化スクリプト（必要に応じて）
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=256M
+      --innodb-log-file-size=64M
+      --max-connections=100
+      --slow-query-log=1
+      --slow-query-log-file=/var/log/mysql/slow.log
+      --long-query-time=2
+    networks:
+      - fukupochi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Redis（本番用）
+  redis:
+    image: redis:7-alpine
+    container_name: fukupochi_redis_prod
+    # ポート公開を削除（セキュリティ向上）
+    expose:
+      - "6379"
+    volumes:
+      - redis_data_prod:/data
+      - redis_logs:/var/log/redis
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
+    # 本番用Redis設定
+    command: redis-server /etc/redis/redis.conf
+    networks:
+      - fukupochi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    # メモリ制限（VPS環境考慮）
+    mem_limit: 128M
+
+  # 本番用：Cron & Queue Worker
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    container_name: fukupochi_scheduler_prod
+    volumes:
+      - app_storage:/var/www/html/storage
+    env_file:
+      - .env.production
+    environment:
+      - APP_ENV=production
+      - DB_HOST=database
+      - REDIS_HOST=redis
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fukupochi_network
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+
+  queue_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    container_name: fukupochi_queue_prod
+    volumes:
+      - app_storage:/var/www/html/storage
+    env_file:
+      - .env.production
+    environment:
+      - APP_ENV=production
+      - DB_HOST=database
+      - REDIS_HOST=redis
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fukupochi_network
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--verbose", "--tries=3", "--timeout=90"]
+
+# 本番用ボリューム定義
+volumes:
+  # アプリケーション関連
+  app_storage:
+    driver: local
+  app_bootstrap_cache:
+    driver: local
+  
+  # データベース関連
+  mysql_data_prod:
+    driver: local
+  mysql_logs:
+    driver: local
+  
+  # Redis関連
+  redis_data_prod:
+    driver: local
+  redis_logs:
+    driver: local
+  
+  # Nginx関連
+  nginx_logs:
+    driver: local
+
+# 本番用ネットワーク
+networks:
+  fukupochi_network:
+    driver: bridge
+    # 内部ネットワーク分離
+    internal: false
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,156 @@
+# ==============================================================================
+# Laravel 本番用 Dockerfile
+# Multi-stage build で最適化
+# ==============================================================================
+
+# Build Stage: 依存関係インストール
+FROM php:8.4-fpm-alpine AS builder
+
+# 作業ディレクトリを設定
+WORKDIR /var/www/html
+
+# ビルド用パッケージをインストール
+RUN apk add --no-cache \
+    curl \
+    libpng-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libzip-dev \
+    icu-dev \
+    oniguruma-dev \
+    libwebp-dev \
+    # ビルドツール（実行時には不要）
+    autoconf \
+    g++ \
+    make
+
+# PHP拡張をインストール
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        zip \
+        intl \
+        opcache
+
+# OPcacheを有効化（本番用）
+RUN docker-php-ext-enable opcache
+
+# Composerをインストール
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# プロジェクトファイルをコピー
+COPY --chown=www-data:www-data . /var/www/html
+
+# Composer依存関係をインストール（本番用）
+RUN composer install \
+    --no-dev \
+    --optimize-autoloader \
+    --no-interaction \
+    --prefer-dist \
+    --no-scripts
+
+# Laravel最適化コマンド実行
+RUN php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache
+
+# ==============================================================================
+# Production Stage: 実行環境
+FROM php:8.4-fpm-alpine AS production
+
+# メタデータ
+LABEL maintainer="FukuPochi Team"
+LABEL version="1.0.0"
+LABEL description="FukuPochi Laravel Backend (Production)"
+
+# 作業ディレクトリを設定
+WORKDIR /var/www/html
+
+# 本番用：最小限のパッケージのみインストール
+RUN apk add --no-cache \
+    curl \
+    libpng \
+    libxml2 \
+    freetype \
+    libjpeg-turbo \
+    libzip \
+    icu \
+    oniguruma \
+    libwebp \
+    # 監視・デバッグ用ツール
+    htop \
+    mysql-client \
+    # プロセス管理
+    supervisor
+
+# PHP拡張をインストール（production用）
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        zip \
+        intl \
+        opcache
+
+# PHP-FPM設定ファイルをコピー
+COPY docker/php/php.production.ini /usr/local/etc/php/php.ini
+COPY docker/php/www.production.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
+# Supervisor設定（バックグラウンドタスク用）
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# www-data ユーザーに切り替え用のディレクトリ作成
+RUN mkdir -p /var/www/.composer && chown -R www-data:www-data /var/www
+
+# ビルドステージからファイルをコピー
+COPY --from=builder --chown=www-data:www-data /var/www/html /var/www/html
+
+# ストレージとキャッシュディレクトリを作成
+RUN mkdir -p storage/logs \
+    && mkdir -p storage/framework/cache \
+    && mkdir -p storage/framework/sessions \
+    && mkdir -p storage/framework/views \
+    && mkdir -p bootstrap/cache
+
+# 権限を設定
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# ヘルスチェック用スクリプト
+COPY docker/php/healthcheck.php /var/www/html/healthcheck.php
+RUN chmod +x /var/www/html/healthcheck.php
+
+# www-data ユーザーに切り替え
+USER www-data
+
+# ポート9000を公開（PHP-FPM）
+EXPOSE 9000
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD php /var/www/html/healthcheck.php || exit 1
+
+# 起動コマンド：PHP-FPMを起動
+CMD ["php-fpm"]
+
+# ==============================================================================
+# Multi-service variant (Supervisor使用)
+FROM production AS supervisor
+
+USER root
+
+# Supervisorでサービス管理する場合
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
