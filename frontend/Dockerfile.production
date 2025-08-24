@@ -23,10 +23,7 @@ RUN apk add --no-cache \
 # package.json と package-lock.json をコピー（依存関係キャッシュ最適化）
 COPY package*.json ./
 
-# 本番用依存関係をインストール
-RUN npm ci --only=production --frozen-lockfile
-
-# 開発依存関係も一時的にインストール（ビルドに必要）
+# 依存関係をインストール（ビルドに必要）
 RUN npm ci --frozen-lockfile
 
 # ソースコードをコピー
