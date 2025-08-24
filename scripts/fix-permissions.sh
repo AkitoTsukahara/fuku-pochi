@@ -35,6 +35,18 @@ if ! sudo -n true 2>/dev/null; then
 fi
 
 # ==============================================================================
+# Git安全ディレクトリ設定
+# ==============================================================================
+
+log_info "Git安全ディレクトリ設定中..."
+
+# 各ユーザーでgit safe.directoryを設定
+sudo -u ubuntu git config --global --add safe.directory "${PROJECT_DIR}" 2>/dev/null || true
+sudo -u deploy git config --global --add safe.directory "${PROJECT_DIR}" 2>/dev/null || true
+
+log_success "Git安全ディレクトリ設定完了"
+
+# ==============================================================================
 # deployユーザー確認と作成
 # ==============================================================================
 
