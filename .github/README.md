@@ -1,150 +1,102 @@
-# CI/CD設定ガイド
+# GitHub Actions Lightsail CI/CD
 
-> ⚠️ **現在のステータス**: CI/CDワークフローは無効化されています  
-> 使用する場合は、各ワークフローファイルの `on:` セクションのコメントアウトを解除してください。
+> ✅ **現在のステータス**: Lightsail向け自動デプロイが設定済みです  
+> 使用するには、GitHub Secretsの設定が必要です。
 
-このドキュメントでは、GitHub Actionsを使用したCI/CDパイプラインのセットアップと設定方法について説明します。
+このドキュメントでは、AWS Lightsailへの自動デプロイ設定と使用方法について説明します。
 
 ## 🚀 概要
 
-このプロジェクトでは以下のワークフローを利用可能です（現在は無効化中）：
+このプロジェクトでは以下の2つのワークフローを提供しています：
 
-### テストワークフロー (`test.yml`)
-- **トリガー**: PRの作成・更新、main/developブランチへのpush
+### 🧡 テストワークフロー (`test.yml`)
+- **トリガー**: PRの作成・更新、main以外のブランチへのpush
 - **内容**:
-  - バックエンド（Laravel）のPHPUnitテスト
-  - フロントエンド（SvelteKit）のVitestテスト
-  - E2Eテスト（Playwright）
-  - 静的解析（ESLint、TypeScript型チェック）
-  - カバレッジレポート生成
+  - 🐘 Laravel PHPUnitテスト (PHP 8.4 + MySQL 8.4)
+  - 🞓 SvelteKit Vitestテスト (Node.js 20)
+  - 🎭 Playwright E2Eテスト
+  - 🔍 ESLint + TypeScriptチェック
+  - 📊 コードカバレッジレポート (Codecov)
 
-### デプロイワークフロー (`deploy.yml`)
+### 🚀 Lightsailデプロイワークフロー (`lightsail-deploy.yml`)
 - **トリガー**: mainブランチへのpush
 - **内容**:
-  - バックエンドのビルドとデプロイ
-  - フロントエンドのビルドとデプロイ
-  - デプロイ状況の通知
+  1. 🧡 全テスト実行
+  2. 😢 SSH経由でLightsail VPSへデプロイ
+  3. 🏥 ヘルスチェック実行
+  4. 📩 結果通知
 
-## 🔓 ワークフローの有効化
+## 🔐 最重要：GitHub Secrets設定
 
-現在ワークフローは無効化されています。使用する場合は以下の手順で有効化してください：
+自動デプロイを使用するためには、以下のSecrets設定が**必須**です：
 
-### 1. ワークフローファイルの編集
+### 1. 必須Secrets
 
-**.github/workflows/test.yml** と **.github/workflows/deploy.yml** で以下の変更を行います：
+GitHubリポジトリの **Settings** → **Secrets and variables** → **Actions** で設定：
 
-```yaml
-# 現在（無効化中）:
-# on:
-#   push:
-#     branches: [ main, develop ]
-#   pull_request:
-#     branches: [ main, develop ]
+#### `LIGHTSAIL_SSH_PRIVATE_KEY`
+**説明**: VPSへSSH接続するための秘密鍵
 
-# マニュアル実行のみ有効
-on:
-  workflow_dispatch:
-
-# ↓ これを変更 ↓
-
-# 有効化後:
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-  workflow_dispatch:  # マニュアル実行も維持
-```
-
-### 2. 必要な設定を完了
-
-以下の「初期セットアップ」セクションの設定をすべて完了してから有効化してください。
-
-## ⚙️ 初期セットアップ
-
-### 1. ブランチ保護ルールの設定
-
-GitHubリポジトリの設定画面で以下のブランチ保護ルールを設定してください：
-
-1. **Settings** → **Branches** → **Add rule**
-2. **Branch name pattern**: `main`
-3. 以下のオプションを有効化：
-   - ✅ **Require a pull request before merging**
-     - ✅ **Require approvals** (1人)
-     - ✅ **Dismiss stale PR approvals when new commits are pushed**
-   - ✅ **Require status checks to pass before merging**
-     - ✅ **Require branches to be up to date before merging**
-     - 必須ステータスチェック:
-       - `backend-tests`
-       - `frontend-tests`
-       - `e2e-tests`
-   - ✅ **Restrict pushes that create files**
-   - ✅ **Do not allow bypassing the above settings**
-
-### 2. GitHub Secretsの設定
-
-リポジトリの **Settings** → **Secrets and variables** → **Actions** で以下のシークレットを設定してください：
-
-#### 必須シークレット（テスト用）
-現在のテストワークフローでは外部シークレットは不要ですが、以下は推奨設定です：
-
+**取得方法**:
 ```bash
-# コードカバレッジ（Codecov）用（オプション）
-CODECOV_TOKEN=your_codecov_token_here
+# ローカルの秘密鍵を表示
+cat ~/.ssh/id_rsa
 ```
 
-#### デプロイ用シークレット（用途に応じて設定）
+**設定値**: `-----BEGIN OPENSSH PRIVATE KEY-----`から`-----END OPENSSH PRIVATE KEY-----`まで全体
 
-**AWS Deployment**:
-```bash
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-S3_BUCKET=your_s3_bucket_name
-CLOUDFRONT_DISTRIBUTION_ID=your_distribution_id
-```
+#### `LIGHTSAIL_SERVER_IP`  
+**説明**: LightsailインスタンスのIPアドレス
 
-**SSH Deployment**:
-```bash
-DEPLOY_HOST=your_server_ip_or_domain
-DEPLOY_USER=your_ssh_username
-DEPLOY_SSH_KEY=your_private_ssh_key
-```
+**設定値例**: `54.178.217.122`
 
-**Laravel Vapor**:
-```bash
-VAPOR_API_TOKEN=your_vapor_api_token
-```
+#### `REPOSITORY_NAME`
+**説明**: VPS上のプロジェクトディレクトリ名
 
-**Vercel**:
-```bash
-VERCEL_TOKEN=your_vercel_token
-ORG_ID=your_vercel_org_id
-PROJECT_ID=your_vercel_project_id
-```
+**設定値**: 
+- セキュリティ強化前: `fuku-pochi`
+- セキュリティ強化後: VPSの`/var/www/`以下のディレクトリ名
 
-**Netlify**:
-```bash
-NETLIFY_AUTH_TOKEN=your_netlify_token
-NETLIFY_SITE_ID=your_site_id
-```
+### 2. オプションSecrets
 
-**通知用（Slack/Discord）**:
-```bash
-SLACK_WEBHOOK=your_slack_webhook_url
-DISCORD_WEBHOOK=your_discord_webhook_url
-```
+#### `CODECOV_TOKEN` (オプション)
+コードカバレッジレポート用。[Codecov](https://codecov.io/)で取得してください。
 
-### 3. デプロイ設定のカスタマイズ
+## 🔧 初期セットアップ
 
-`.github/workflows/deploy.yml` ファイルで、使用するデプロイ方法のコメントアウトを解除し、不要な部分を削除してください。
+### 1. VPSの前提条件
 
-例：AWS S3 + CloudFrontを使用する場合
-```yaml
-# コメントアウトを解除
-- name: Configure AWS credentials
-  uses: aws-actions/configure-aws-credentials@v4
-  # ... 以下続く
-```
+以下が完了していることを確認してください：
+
+- ✅ Lightsail VPSが起動中
+- ✅ SSH鍵認証設定済み  
+- ✅ `deploy`ユーザー作成済み
+- ✅ Dockerとdocker-composeインストール済み
+- ✅ プロジェクトの手動デプロイ成功済み
+- ✅ `.env.production`ファイル設定済み
+
+### 2. ブランチ保護ルールの設定 (推奨)
+
+**Settings** → **Branches** → **Add rule** で`main`ブランチを保護：
+
+- ✅ **Require a pull request before merging**
+- ✅ **Require status checks to pass before merging**
+  - 必須チェック: `Test Suite` (テストワークフローから)
+- ✅ **Restrict pushes that create files**
+
+### 3. セキュリティ設定
+
+**SSH鍵の管理**:
+- 秘密鍵は定期的にローテーション  
+- VPS上の`~/.ssh/authorized_keys`の管理
+- 不要な鍵の削除
+
+**GitHub Secretsの管理**:
+- 必要なもののみ設定
+- 定期的な見直し
+- アクセスログの監視
+
+
 
 ## 🧪 動作確認方法
 
@@ -153,32 +105,37 @@ DISCORD_WEBHOOK=your_discord_webhook_url
 1. **新しいブランチを作成**:
    ```bash
    git checkout -b feature/ci-test
-   ```
-
-2. **適当な変更を追加**:
-   ```bash
    echo "# CI Test" >> README.md
    git add README.md
    git commit -m "test: CI workflow test"
    git push origin feature/ci-test
    ```
 
-3. **Pull Requestを作成**:
+2. **Pull Requestを作成**:
    - GitHubでPRを作成
    - テンプレートに従って内容を記入
 
-4. **ワークフローの実行確認**:
-   - PRページの「Checks」タブでワークフローの実行状況を確認
-   - 各ジョブ（backend-tests, frontend-tests, e2e-tests）が正常に完了することを確認
+3. **ワークフローの実行確認**:
+   - PRページの「Checks」タブで`Test Suite`が実行されることを確認
+   - すべてのテスト（Backend, Frontend, E2E）が正常完了することを確認
 
-### 2. デプロイワークフローの動作確認
+### 2. Lightsailデプロイワークフローの動作確認
+
+**前提**: GitHub Secretsが正しく設定されていること
 
 1. **PRをマージ**:
    - テストが通ったPRをmainブランチにマージ
 
 2. **デプロイワークフローの実行確認**:
-   - ActionsタブでDeployワークフローが実行されることを確認
-   - 現在はプレースホルダーなので、ログに「deployment placeholder」が表示されます
+   - Actionsタブで`🚀 Lightsail Auto Deploy`が自動実行される
+   - テスト→デプロイ→ヘルスチェックの順で実行
+   - ヘルスチェックが成功したらデプロイ完了
+
+3. **アプリケーション確認**:
+   ```bash
+   # ブラウザまたはcurlでアクセス確認
+   curl http://YOUR_SERVER_IP/health
+   ```
 
 ### 3. 手動でのローカルテスト
 
@@ -213,41 +170,47 @@ npx playwright test
 
 ### よくある問題と解決方法
 
-#### 1. MySQL接続エラー
+#### 1. SSH接続エラー
 ```
-SQLSTATE[HY000] [2002] Connection refused
-```
-
-**解決方法**: GitHub Actionsのサービスコンテナ起動を待つ時間が不足している可能性。ワークフローの `options` に `--health-*` パラメータが正しく設定されているか確認。
-
-#### 2. Node.js依存関係エラー
-```
-Cannot resolve dependency
+Permission denied (publickey)
 ```
 
 **解決方法**: 
-- `package-lock.json`が最新か確認
-- キャッシュをクリア: Actions設定でキャッシュを削除
+- `LIGHTSAIL_SSH_PRIVATE_KEY`の値を確認
+- VPS上の`~/.ssh/authorized_keys`にpublic keyが登録されているか確認
+- SSH鍵の形式が正しいか確認
 
-#### 3. PHPメモリ不足
+#### 2. デプロイスクリプト実行エラー
 ```
-Fatal error: Allowed memory size exhausted
-```
-
-**解決方法**: ワークフローに以下を追加
-```yaml
-- name: Set PHP memory limit
-  run: echo 'memory_limit=512M' >> /tmp/php.ini
-```
-
-#### 4. E2Eテストのタイムアウト
-```
-Test timeout exceeded
+deploy.sh: Permission denied
 ```
 
 **解決方法**: 
-- Playwrightの設定でタイムアウト時間を調整
-- CI環境では `--workers=1` で並列度を下げる
+```bash
+# VPS上で権限を確認・修正
+ssh deploy@YOUR_SERVER_IP
+chmod +x /var/www/YOUR_REPOSITORY/scripts/deploy.sh
+```
+
+#### 3. ヘルスチェック失敗
+```
+Health check failed after 5 attempts
+```
+
+**解決方法**: 
+- VPS上で手動確認: `curl http://localhost/health`
+- サービス状態確認: `docker compose -f docker-compose.production.yml ps`
+- ログ確認: `docker compose -f docker-compose.production.yml logs`
+
+#### 4. テスト失敗
+```
+Tests failed
+```
+
+**解決方法**: 
+- ローカルでテストが通るか確認: `php artisan test`, `npm run test`
+- 依存関係の問題: `composer install`, `npm ci`を再実行
+- データベース関連: マイグレーション・シーディングの確認
 
 ## 📝 その他の設定
 
@@ -268,15 +231,30 @@ Test timeout exceeded
 
 ## 🚀 次のステップ
 
-1. **デプロイ方法の選択と設定**
-2. **通知設定の追加**  
-3. **本番環境の環境変数設定**
-4. **バックアップ・リストア手順の整備**
-5. **モニタリング・ログ収集の設定**
+1. **GitHub Secretsの設定** - 最重要！
+2. **ブランチ保護ルールの設定**  
+3. **テストPRでの動作確認**
+4. **本番デプロイの実行と検証**
+5. **監視・通知の追加設定**
 
 ## 📞 サポート
 
-問題が発生した場合は、以下を確認してください：
-- GitHub Actionsの実行ログ
-- 各サービスのステータスページ
-- 設定したシークレットが正しいか
+問題が発生した場合：
+
+1. **GitHub Actionsのログ確認**
+   - リポジトリのActionsタブ → 失敗したワークフロー → 詳細ログ確認
+
+2. **VPS上での状況確認**
+   ```bash
+   # SSH接続してログ確認
+   ssh deploy@YOUR_SERVER_IP
+   cd /var/www/YOUR_REPOSITORY
+   docker compose -f docker-compose.production.yml logs
+   ```
+
+3. **設定の再確認**
+   - GitHub Secretsが正しく設定されているか
+   - VPS上の`.env.production`が正しく設定されているか
+   - SSH鍵の権限と形式が正しいか
+
+詳細な設定手順は `docs/github-actions-setup.md` を参照してください。

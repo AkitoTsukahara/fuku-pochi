@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# FukuPochi デプロイスクリプト
+# Lightsail 自動デプロイスクリプト
 # 本番環境への継続的デプロイメント
 # ==============================================================================
 
@@ -34,7 +34,8 @@ log_error() {
 # 設定変数
 # ==============================================================================
 
-PROJECT_NAME="fuku-pochi"
+# 環境変数からプロジェクト名を取得（セキュリティ対応）
+PROJECT_NAME="${REPOSITORY_NAME:-webapp}"
 DEPLOY_DIR="/var/www/${PROJECT_NAME}"
 COMPOSE_FILE="docker-compose.production.yml"
 BACKUP_DIR="/var/backups/${PROJECT_NAME}"
@@ -54,13 +55,17 @@ if [ ! -d "${DEPLOY_DIR}" ]; then
     exit 1
 fi
 
-# 環境変数ファイルチェック
+# 環境変数ファイルチェックと読み込み
 if [ ! -f "${DEPLOY_DIR}/.env.production" ]; then
     log_error ".env.production ファイルが存在しません"
     log_info "テンプレートをコピーして設定してください:"
     log_info "cp .env.production.example .env.production"
     exit 1
 fi
+
+# 環境変数を読み込み（セキュリティ対応）
+source "${DEPLOY_DIR}/.env.production"
+export $(grep -v '^#' "${DEPLOY_DIR}/.env.production" | grep '=' | cut -d= -f1)
 
 # Dockerチェック
 if ! command -v docker &> /dev/null; then
@@ -84,11 +89,11 @@ if [ "${SKIP_BACKUP}" != "true" ]; then
     # バックアップディレクトリ作成
     mkdir -p "${BACKUP_DIR}"
     
-    # データベースバックアップ
+    # データベースバックアップ（セキュリティ対応）
     if docker compose -f "${DEPLOY_DIR}/${COMPOSE_FILE}" ps database | grep -q "Up"; then
         BACKUP_FILE="${BACKUP_DIR}/db-backup-$(date +%Y%m%d_%H%M%S).sql"
         docker compose -f "${DEPLOY_DIR}/${COMPOSE_FILE}" exec -T database \
-            mysqldump -u root -p"${DB_ROOT_PASSWORD}" fukupochi > "${BACKUP_FILE}"
+            mysqldump -u root -p"${DB_ROOT_PASSWORD}" "${DB_DATABASE}" > "${BACKUP_FILE}"
         log_success "データベースバックアップ完了: ${BACKUP_FILE}"
     else
         log_warning "データベースコンテナが起動していないため、バックアップをスキップします"
@@ -275,16 +280,17 @@ log_success "Laravel最適化完了"
 
 log_info "最終ヘルスチェック実行中..."
 
-# HTTP接続テスト
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/health || echo "000")
+# HTTP接続テスト（環境変数対応）
+SERVER_URL="http://${SERVER_IP:-localhost}"
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${SERVER_URL}/health" || echo "000")
 if [ "${HTTP_STATUS}" = "200" ]; then
     log_success "HTTP ヘルスチェック: OK (${HTTP_STATUS})"
 else
     log_error "HTTP ヘルスチェック: NG (${HTTP_STATUS})"
 fi
 
-# API接続テスト
-API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/api/health || echo "000")
+# API接続テスト（環境変数対応）
+API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${SERVER_URL}/api/health" || echo "000")
 if [ "${API_STATUS}" = "200" ]; then
     log_success "API ヘルスチェック: OK (${API_STATUS})"
 else
@@ -322,9 +328,9 @@ echo "  - デプロイ時刻: $(date)"
 
 echo ""
 log_info "アプリケーション情報:"
-echo "  - Frontend: http://localhost"
-echo "  - API: http://localhost/api"
-echo "  - Health Check: http://localhost/health"
+echo "  - Frontend: ${SERVER_URL}"
+echo "  - API: ${SERVER_URL}/api"
+echo "  - Health Check: ${SERVER_URL}/health"
 
 echo ""
 log_info "ログ確認コマンド:"

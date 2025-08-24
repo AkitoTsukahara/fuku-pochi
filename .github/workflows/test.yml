@@ -1,0 +1,142 @@
+name: 🧪 Run Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches-ignore: [ main ]  # mainブランチ以外のpush
+  workflow_dispatch:
+
+env:
+  PHP_VERSION: '8.4'
+  NODE_VERSION: '20'
+
+jobs:
+  test:
+    name: 🧪 Test Suite
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: app_test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: 📂 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐘 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, zip
+          tools: composer:v2
+          coverage: xdebug
+
+      - name: 📦 Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: 🎼 Install Composer dependencies
+        working-directory: ./backend
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: 🔑 Generate application key
+        working-directory: ./backend
+        run: php artisan key:generate --ansi
+
+      - name: 📊 Setup database
+        working-directory: ./backend
+        run: |
+          cp .env.example .env
+          sed -i 's/DB_HOST=database/DB_HOST=127.0.0.1/' .env
+          sed -i 's/DB_DATABASE=app_dev_db/DB_DATABASE=app_test_db/' .env
+          sed -i 's/DB_USERNAME=db_user_dev/DB_USERNAME=test_user/' .env
+          sed -i 's/DB_PASSWORD=dev_password_change_in_prod/DB_PASSWORD=test_password/' .env
+          php artisan migrate --seed --force
+
+      - name: 🧪 Run PHPUnit tests
+        working-directory: ./backend
+        run: php artisan test --coverage --coverage-clover=coverage.xml
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: 🔍 Run ESLint
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: 📝 Run TypeScript checks
+        working-directory: ./frontend
+        run: npm run check
+
+      - name: 🧪 Run frontend tests
+        working-directory: ./frontend
+        run: npm run test:run
+
+      - name: 🎭 Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: 🧪 Run E2E tests
+        working-directory: ./frontend
+        run: npm run test:e2e
+
+      - name: 📊 Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: success()
+        with:
+          files: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+
+      - name: 📋 Test Summary
+        if: always()
+        run: |
+          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Backend tests (PHPUnit)" >> $GITHUB_STEP_SUMMARY  
+            echo "- ✅ Frontend tests (Vitest)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ E2E tests (Playwright)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Code quality checks" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some tests failed!" >> $GITHUB_STEP_SUMMARY
+            echo "Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi

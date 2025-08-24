@@ -1,0 +1,196 @@
+name: 🚀 Lightsail Auto Deploy
+
+on:
+  push:
+    branches: [ main ]
+  # Manual trigger for testing
+  workflow_dispatch:
+
+env:
+  PHP_VERSION: '8.4'
+  NODE_VERSION: '20'
+
+jobs:
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: app_test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: 📂 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐘 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, zip
+          tools: composer:v2
+          coverage: xdebug
+
+      - name: 📦 Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: 🎼 Install Composer dependencies
+        working-directory: ./backend
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: 🔑 Generate application key
+        working-directory: ./backend
+        run: php artisan key:generate --ansi
+
+      - name: 📊 Setup database
+        working-directory: ./backend
+        run: |
+          cp .env.example .env
+          sed -i 's/DB_HOST=database/DB_HOST=127.0.0.1/' .env
+          sed -i 's/DB_DATABASE=app_dev_db/DB_DATABASE=app_test_db/' .env
+          sed -i 's/DB_USERNAME=db_user_dev/DB_USERNAME=test_user/' .env
+          sed -i 's/DB_PASSWORD=dev_password_change_in_prod/DB_PASSWORD=test_password/' .env
+          php artisan migrate --seed --force
+
+      - name: 🧪 Run PHPUnit tests
+        working-directory: ./backend
+        run: php artisan test
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: 🧪 Run frontend tests
+        working-directory: ./frontend
+        run: npm run test:run
+
+      - name: 🎭 Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: 🧪 Run E2E tests
+        working-directory: ./frontend
+        run: npm run test:e2e
+
+  deploy:
+    name: 🚢 Deploy to Lightsail
+    needs: test
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: 📂 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LIGHTSAIL_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.LIGHTSAIL_SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: 🚀 Deploy to Lightsail
+        run: |
+          ssh -o StrictHostKeyChecking=no deploy@${{ secrets.LIGHTSAIL_SERVER_IP }} << 'EOF'
+            set -e
+            
+            echo "🔄 Starting deployment..."
+            
+            # Navigate to project directory
+            cd /var/www/${{ secrets.REPOSITORY_NAME }}
+            
+            # Pull latest changes
+            echo "📥 Pulling latest changes..."
+            git pull origin main
+            
+            # Run deployment script
+            echo "🚀 Running deployment script..."
+            chmod +x ./scripts/deploy.sh
+            ./scripts/deploy.sh
+            
+            echo "✅ Deployment completed!"
+          EOF
+
+      - name: 🏥 Health Check
+        run: |
+          echo "🏥 Performing health check..."
+          
+          # Wait for services to start
+          sleep 30
+          
+          # Health check with retry
+          for i in {1..5}; do
+            if curl -f http://${{ secrets.LIGHTSAIL_SERVER_IP }}/health; then
+              echo "✅ Health check passed!"
+              break
+            else
+              echo "⏳ Health check failed, retrying in 10 seconds... ($i/5)"
+              sleep 10
+              if [ $i -eq 5 ]; then
+                echo "❌ Health check failed after 5 attempts"
+                exit 1
+              fi
+            fi
+          done
+
+      - name: 📊 Deployment Summary
+        if: success()
+        run: |
+          echo "🎉 Deployment Summary:"
+          echo "- ✅ Tests passed"
+          echo "- ✅ Deployed to Lightsail"
+          echo "- ✅ Health check passed"
+          echo "- 🌐 Application URL: http://${{ secrets.LIGHTSAIL_SERVER_IP }}"
+
+      - name: 💬 Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check the logs for more details."
+          # Here you can add Slack/Discord notification if needed
+
+  cleanup:
+    name: 🧹 Cleanup
+    needs: [test, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: 🧹 Clean up SSH keys
+        run: |
+          rm -f ~/.ssh/id_rsa
+          echo "SSH keys cleaned up"
